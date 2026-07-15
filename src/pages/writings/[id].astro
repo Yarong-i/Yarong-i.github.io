@@ -2,20 +2,22 @@
 import { getCollection, render } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { getWritingExcerpt } from '../../utils/writings';
+import { formatWritingDate } from '../../utils/writingDates';
 export async function getStaticPaths() {
   const writings = await getCollection('writings', ({ data }) => !data.draft);
   return writings.map(writing => ({ params: { id: writing.id }, props: { writing } }));
 }
 const { writing } = Astro.props;
 const { Content } = await render(writing);
-const date = new Intl.DateTimeFormat('ko-KR', { dateStyle: 'long' }).format(writing.data.date);
+const writtenDate = writing.data.writtenAt ? formatWritingDate(writing.data.writtenAt, 'long') : 'Date unknown';
+const publishedDate = formatWritingDate(writing.data.publishedAt, 'long');
 const excerpt = getWritingExcerpt(writing);
 const isPoetry = writing.data.category.toLowerCase() === 'poetry';
 ---
 <BaseLayout title={`${writing.data.title} — YARONG`} description={excerpt}>
   <article class="page shell reveal">
     <a class="eyebrow" href="/writings">← Writings</a>
-    <header class:list={{ 'poem-header': isPoetry }}><p class="meta">{writing.data.category} · {date}</p><h1>{writing.data.title}</h1><p class="excerpt">{excerpt}</p><ul class="tag-list">{writing.data.tags.map((tag: string) => <li class="tag">{tag}</li>)}</ul></header>
+    <header class:list={{ 'poem-header': isPoetry }}><p class="meta">{writing.data.category} · {writtenDate}</p><p class="published-meta meta">Published {publishedDate}{writing.data.updatedAt && ` · Updated ${formatWritingDate(writing.data.updatedAt, 'long')}`}</p><h1>{writing.data.title}</h1><p class="excerpt">{excerpt}</p><ul class="tag-list">{writing.data.tags.map((tag: string) => <li class="tag">{tag}</li>)}</ul></header>
     <div class:list={['prose', 'writing-body', { poem: isPoetry }]}><Content /></div>
   </article>
 </BaseLayout>
@@ -23,6 +25,7 @@ const isPoetry = writing.data.category.toLowerCase() === 'poetry';
   header { max-width: 900px; margin: clamp(4rem, 8vw, 7rem) auto clamp(6rem, 13vw, 11rem); text-align: center; }
   h1 { margin: 1.5rem 0 2rem; font: 500 clamp(3.5rem, 8vw, 7rem)/1 var(--sans); letter-spacing: -.06em; word-break: keep-all; }
   .excerpt { color: var(--muted); } .tag-list { justify-content: center; }
+  .published-meta { margin: .45rem 0 0; color: var(--faint); font-size: .68rem; }
   .poem-header h1 { font-size: clamp(2.8rem, 6vw, 5.5rem); }
   .poem-header .excerpt { max-width: 38rem; margin-inline: auto; }
   .writing-body.poem { max-width: 34rem; font-size: clamp(1.08rem, 1.5vw, 1.2rem); line-height: 2.25; }

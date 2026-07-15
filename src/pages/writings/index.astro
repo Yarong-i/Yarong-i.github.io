@@ -2,7 +2,8 @@
 import { getCollection } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import WritingList from '../../components/WritingList.astro';
-const writings = (await getCollection('writings', ({ data }) => !data.draft)).sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+import { sortWritings } from '../../utils/writingDates';
+const writings = sortWritings(await getCollection('writings', ({ data }) => !data.draft));
 const tags = [...new Set(writings.flatMap(w => w.data.tags))].sort();
 ---
 <BaseLayout title="Writings — YARONG" description="시와 짧은 글을 모은 조용한 아카이브">
@@ -37,7 +38,16 @@ const tags = [...new Set(writings.flatMap(w => w.data.tags))].sort();
       item.hidden = !show; return show;
     });
     const direction = sort?.value === 'old' ? 1 : -1;
-    items.sort((a, b) => direction * ((a.dataset.date ?? '').localeCompare(b.dataset.date ?? ''))).forEach(item => list?.append(item));
+    [...items].sort((a, b) => {
+      const aDate = a.dataset.writtenAt ?? '';
+      const bDate = b.dataset.writtenAt ?? '';
+      const publishedOrder = (b.dataset.publishedAt ?? '').localeCompare(a.dataset.publishedAt ?? '');
+      const titleOrder = (a.dataset.title ?? '').localeCompare(b.dataset.title ?? '', 'ko-KR');
+      if (!aDate && !bDate) return publishedOrder || titleOrder;
+      if (!aDate) return 1;
+      if (!bDate) return -1;
+      return direction * aDate.localeCompare(bDate) || publishedOrder || titleOrder;
+    }).forEach(item => list?.append(item));
     if (count) count.textContent = `${visible.length} entries`;
     if (empty) empty.hidden = visible.length > 0;
   }

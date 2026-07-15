@@ -1,6 +1,7 @@
 ---
 title: 반쯤 가린 시계
-date: 2025-12-09
+writtenAt: 2026-07-09
+publishedAt: 2026-07-15
 tags: [짧은 글, 시간]
 category: poetry
 draft: false

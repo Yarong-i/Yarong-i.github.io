@@ -3,9 +3,10 @@ import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import ProjectList from '../components/ProjectList.astro';
 import WritingList from '../components/WritingList.astro';
+import { sortWritings } from '../utils/writingDates';
 const projects = await getCollection('projects');
 const featured = projects.filter(p => p.data.featured).sort((a, b) => b.data.year - a.data.year);
-const writings = (await getCollection('writings', ({ data }) => !data.draft)).sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+const writings = sortWritings(await getCollection('writings', ({ data }) => !data.draft));
 const current = projects.filter(p => p.data.status === 'In Development');
 ---
 <BaseLayout>

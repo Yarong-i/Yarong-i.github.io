@@ -3,15 +3,24 @@ import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
 const projects = await getCollection('projects');
 const writings = await getCollection('writings', ({ data }) => !data.draft);
-const entries = [
-  ...projects.map(p => ({ year: p.data.year, type: 'Project', title: p.data.title, meta: p.data.category, href: `/projects/${p.id}/` })),
-  ...writings.map(w => ({ year: w.data.date.getFullYear(), type: 'Writing', title: w.data.title, meta: w.data.category, href: `/writings/${w.id}/` }))
-].sort((a, b) => b.year - a.year || a.title.localeCompare(b.title));
-const years = [...new Set(entries.map(e => e.year))];
+const unsortedEntries = [
+  ...projects.map(p => ({ group: String(p.data.year), sortTime: Date.UTC(p.data.year, 0, 1), publishedTime: Date.UTC(p.data.year, 0, 1), type: 'Project', title: p.data.title, meta: p.data.category, href: `/projects/${p.id}/` })),
+  ...writings.map(w => ({ group: w.data.writtenAt ? String(w.data.writtenAt.getFullYear()) : 'DATE UNKNOWN', sortTime: w.data.writtenAt?.getTime() ?? 0, publishedTime: w.data.publishedAt.getTime(), type: 'Writing', title: w.data.title, meta: w.data.category, href: `/writings/${w.id}/` }))
+];
+const entries = [...unsortedEntries].sort((a, b) =>
+  b.sortTime - a.sortTime
+  || b.publishedTime - a.publishedTime
+  || a.title.localeCompare(b.title, 'ko-KR')
+);
+const groups = [...new Set(entries.map(e => e.group))].sort((a, b) => {
+  if (a === 'DATE UNKNOWN') return 1;
+  if (b === 'DATE UNKNOWN') return -1;
+  return Number(b) - Number(a);
+});
 ---
 <BaseLayout title="Archive — YARONG" description="프로젝트와 글을 시간순으로 모은 통합 아카이브">
   <div class="page shell reveal"><p class="eyebrow">Index / {entries.length} entries</p><h1 class="page-title">Archive</h1>
-    {years.map(year => <section><h2>{year}</h2><div>{entries.filter(e => e.year === year).map(e => <a href={e.href}><span class="meta">{e.type}</span><strong>{e.title}</strong><span class="meta">{e.meta}</span></a>)}</div></section>)}
+    {groups.map(group => <section><h2>{group}</h2><div>{entries.filter(e => e.group === group).map(e => <a href={e.href}><span class="meta">{e.type}</span><strong>{e.title}</strong><span class="meta">{e.meta}</span></a>)}</div></section>)}
   </div>
 </BaseLayout>
 <style>

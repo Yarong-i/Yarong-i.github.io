@@ -37,7 +37,9 @@ const writings = defineCollection({
   loader: glob({ pattern: '**/*.{md,mdx}', base: './src/content/writings' }),
   schema: z.object({
     title: z.string(),
-    date: z.coerce.date(),
+    writtenAt: z.coerce.date().optional(),
+    publishedAt: z.coerce.date(),
+    updatedAt: z.coerce.date().optional(),
     tags: z.array(z.string()),
     category: z.string(),
     excerpt: z.string().optional(),
