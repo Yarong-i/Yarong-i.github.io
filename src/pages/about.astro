@@ -1,0 +1,15 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+<BaseLayout title="About — YARONG" description="Yarong에 대하여">
+  <div class="page shell reveal"><p class="eyebrow">Profile / Seoul, KR</p><h1 class="page-title">About</h1>
+    <div class="intro"><p>코드로 시스템을 만들고,<br />글로 남은 감각을 기록합니다.</p><span class="meta">Developer / Builder / Writer</span></div>
+    <div class="grid"><h2>두 개의 기록 방식</h2><div><p>프로젝트는 문제를 구조화하고 작동하는 형태로 옮긴 기록입니다. 자동화, 금융, 게임 개발, 도구 제작을 탐구합니다.</p><p>글은 구조 바깥에 남은 생각과 감각을 보관하는 방식입니다. 시와 짧은 산문을 천천히 쌓아갑니다.</p></div></div>
+    <div class="grid"><h2>Contact</h2><div><a class="arrow-link" href="https://github.com/Yarong-i" rel="me">GitHub / Yarong-i</a></div></div>
+  </div>
+</BaseLayout>
+<style>
+  .intro { padding-bottom: clamp(6rem, 12vw, 11rem); } .intro > p { max-width: 1000px; margin: 0 0 2rem; font: 500 clamp(2.5rem, 6vw, 5.8rem)/1.08 var(--sans); letter-spacing: -.055em; }
+  .grid { display: grid; grid-template-columns: 1fr 2fr; gap: 4rem; padding: 4rem 0; border-top: 1px solid var(--line); } .grid h2 { margin: 0; font: 500 1.1rem var(--sans); } .grid p { max-width: 650px; margin: 0 0 2rem; color: var(--muted); font-size: 1.05rem; }
+  @media(max-width: 650px) { .grid { grid-template-columns: 1fr; gap: 2rem; } }
+</style>

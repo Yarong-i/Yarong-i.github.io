@@ -1,0 +1,25 @@
+---
+import { getCollection, render } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getWritingExcerpt } from '../../utils/writings';
+export async function getStaticPaths() {
+  const writings = await getCollection('writings', ({ data }) => !data.draft);
+  return writings.map(writing => ({ params: { id: writing.id }, props: { writing } }));
+}
+const { writing } = Astro.props;
+const { Content } = await render(writing);
+const date = new Intl.DateTimeFormat('ko-KR', { dateStyle: 'long' }).format(writing.data.date);
+const excerpt = getWritingExcerpt(writing);
+---
+<BaseLayout title={`${writing.data.title} — YARONG`} description={excerpt}>
+  <article class="page shell reveal">
+    <a class="eyebrow" href="/writings">← Writings</a>
+    <header><p class="meta">{writing.data.category} · {date}</p><h1>{writing.data.title}</h1><p class="excerpt">{excerpt}</p><ul class="tag-list">{writing.data.tags.map((tag: string) => <li class="tag">{tag}</li>)}</ul></header>
+    <div class="prose"><Content /></div>
+  </article>
+</BaseLayout>
+<style>
+  header { max-width: 900px; margin: clamp(4rem, 8vw, 7rem) auto clamp(6rem, 13vw, 11rem); text-align: center; }
+  h1 { margin: 1.5rem 0 2rem; font: 500 clamp(3.5rem, 8vw, 7rem)/1 var(--sans); letter-spacing: -.06em; word-break: keep-all; }
+  .excerpt { color: var(--muted); } .tag-list { justify-content: center; }
+</style>

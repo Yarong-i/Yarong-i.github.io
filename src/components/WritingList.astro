@@ -1,0 +1,17 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import { getWritingExcerpt } from '../utils/writings';
+interface Props { writings: CollectionEntry<'writings'>[]; searchable?: boolean; }
+const { writings, searchable = false } = Astro.props;
+const format = (date: Date) => new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
+---
+<div class="writing-list" data-writing-list={searchable ? '' : undefined}>
+  {writings.map((writing) => (
+    <article class="writing-item" data-writing data-title={writing.data.title.toLowerCase()} data-body={(writing.body ?? '').toLowerCase()} data-tags={writing.data.tags.join(' ').toLowerCase()} data-date={writing.data.date.toISOString()}>
+      <span class="meta">{format(writing.data.date)} · {writing.data.category}</span>
+      <h2><a href={`/writings/${writing.id}/`}>{writing.data.title}</a></h2>
+      <p>{getWritingExcerpt(writing)}</p>
+      <ul class="tag-list" aria-label="태그">{writing.data.tags.map(tag => <li class="tag">{tag}</li>)}</ul>
+    </article>
+  ))}
+</div>

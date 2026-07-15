@@ -1,0 +1,18 @@
+<footer>
+  <div class="shell top">
+    <p>Ideas become systems.<br />Remnants become writing.</p>
+    <a class="arrow-link" href="#content">Back to top</a>
+  </div>
+  <div class="shell bottom">
+    <span>© {new Date().getFullYear()} YARONG</span>
+    <span>SEOUL, KR</span>
+    <span>BUILT WITH ASTRO</span>
+  </div>
+</footer>
+<style>
+  footer { margin-top: clamp(5rem, 12vw, 12rem); border-top: 1px solid var(--line); }
+  .top { display: flex; justify-content: space-between; align-items: end; min-height: 310px; padding-block: 4rem; }
+  .top p { margin: 0; font: 500 clamp(2rem, 5vw, 5rem)/1 var(--sans); letter-spacing: -.05em; }
+  .bottom { display: flex; justify-content: space-between; gap: 1rem; padding-block: 1.2rem; border-top: 1px solid var(--line); color: var(--muted); font: .6rem var(--mono); letter-spacing: .08em; }
+  @media (max-width: 600px) { .top { display: block; min-height: 240px; } .top .arrow-link { margin-top: 3rem; } .bottom span:nth-child(2) { display: none; } }
+</style>

@@ -1,0 +1,56 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import WritingList from '../../components/WritingList.astro';
+const writings = (await getCollection('writings', ({ data }) => !data.draft)).sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+const tags = [...new Set(writings.flatMap(w => w.data.tags))].sort();
+---
+<BaseLayout title="Writings — YARONG" description="시와 짧은 글을 모은 조용한 아카이브">
+  <div class="page shell reveal">
+    <p class="eyebrow">Poetry / Prose / Fragments</p><h1 class="page-title">Writings</h1>
+    <div class="tools" aria-label="글 목록 도구">
+      <label><span>Search</span><input type="search" id="search" placeholder="제목, 본문, 태그" /></label>
+      <label><span>Tag</span><select id="tag"><option value="">모든 태그</option>{tags.map(tag => <option value={tag.toLowerCase()}>{tag}</option>)}</select></label>
+      <label><span>Order</span><select id="sort"><option value="new">최신순</option><option value="old">오래된순</option></select></label>
+      <button id="random" type="button">Random entry ↗</button>
+    </div>
+    <p id="count" class="meta" aria-live="polite">{writings.length} entries</p>
+    <WritingList writings={writings} searchable />
+    <p class="empty" id="empty" hidden>검색 조건에 맞는 글이 없습니다.</p>
+  </div>
+</BaseLayout>
+<script>
+  const search = document.querySelector<HTMLInputElement>('#search');
+  const tag = document.querySelector<HTMLSelectElement>('#tag');
+  const sort = document.querySelector<HTMLSelectElement>('#sort');
+  const random = document.querySelector<HTMLButtonElement>('#random');
+  const list = document.querySelector<HTMLElement>('[data-writing-list]');
+  const count = document.querySelector<HTMLElement>('#count');
+  const empty = document.querySelector<HTMLElement>('#empty');
+  const items = Array.from(document.querySelectorAll<HTMLElement>('[data-writing]'));
+  function update() {
+    const query = search?.value.trim().toLowerCase() ?? '';
+    const selected = tag?.value ?? '';
+    const visible = items.filter(item => {
+      const haystack = `${item.dataset.title} ${item.dataset.body} ${item.dataset.tags}`;
+      const show = haystack.includes(query) && (!selected || item.dataset.tags?.split(' ').includes(selected));
+      item.hidden = !show; return show;
+    });
+    const direction = sort?.value === 'old' ? 1 : -1;
+    items.sort((a, b) => direction * ((a.dataset.date ?? '').localeCompare(b.dataset.date ?? ''))).forEach(item => list?.append(item));
+    if (count) count.textContent = `${visible.length} entries`;
+    if (empty) empty.hidden = visible.length > 0;
+  }
+  search?.addEventListener('input', update); tag?.addEventListener('change', update); sort?.addEventListener('change', update);
+  random?.addEventListener('click', () => { const visible = items.filter(i => !i.hidden); const target = visible[Math.floor(Math.random() * visible.length)]; target?.querySelector<HTMLAnchorElement>('h2 a')?.click(); });
+</script>
+<style>
+  .tools { display: grid; grid-template-columns: 2fr 1fr 1fr auto; border-block: 1px solid var(--line); margin-bottom: 1.2rem; }
+  label { display: flex; flex-direction: column; gap: .5rem; padding: 1rem; border-right: 1px solid var(--line); }
+  label span { color: var(--faint); font: clamp(.7rem, .65vw, .76rem) var(--mono); text-transform: uppercase; letter-spacing: .09em; }
+  input, select { width: 100%; min-width: 0; border: 0; border-radius: 0; background: transparent; color: var(--text); outline: 0; font-size: clamp(.88rem, .8vw, .96rem); } select option { background: var(--bg); }
+  button { padding: 1rem 1.5rem; border: 0; background: var(--text); color: var(--bg); cursor: pointer; font: clamp(.72rem, .66vw, .78rem) var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+  #count { margin: 2rem 0 1rem; }
+  @media(max-width: 900px) { .tools { grid-template-columns: 1fr 1fr; } label:nth-child(1) { grid-column: 1 / -1; border-right: 0; } label:nth-child(2) { border-top: 1px solid var(--line); } label:nth-child(3) { border-top: 1px solid var(--line); border-right: 0; } button { grid-column: 1 / -1; min-height: 3.25rem; } }
+  @media(max-width: 420px) { label { padding: .9rem .75rem; } }
+</style>

@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.astro/
+.DS_Store
+*.log
+.tools/
+.env
+.env.*
+!.env.example
+*.pdf
+screenshots/
+*.png
+*.jpg
+*.jpeg

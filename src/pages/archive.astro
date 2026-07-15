@@ -1,0 +1,23 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+const projects = await getCollection('projects');
+const writings = await getCollection('writings', ({ data }) => !data.draft);
+const entries = [
+  ...projects.map(p => ({ year: p.data.year, type: 'Project', title: p.data.title, meta: p.data.category, href: `/projects/${p.id}/` })),
+  ...writings.map(w => ({ year: w.data.date.getFullYear(), type: 'Writing', title: w.data.title, meta: w.data.category, href: `/writings/${w.id}/` }))
+].sort((a, b) => b.year - a.year || a.title.localeCompare(b.title));
+const years = [...new Set(entries.map(e => e.year))];
+---
+<BaseLayout title="Archive — YARONG" description="프로젝트와 글을 시간순으로 모은 통합 아카이브">
+  <div class="page shell reveal"><p class="eyebrow">Index / {entries.length} entries</p><h1 class="page-title">Archive</h1>
+    {years.map(year => <section><h2>{year}</h2><div>{entries.filter(e => e.year === year).map(e => <a href={e.href}><span class="meta">{e.type}</span><strong>{e.title}</strong><span class="meta">{e.meta}</span></a>)}</div></section>)}
+  </div>
+</BaseLayout>
+<style>
+  section { display: grid; grid-template-columns: minmax(5rem, 1fr) 4fr; gap: 3rem; border-top: 1px solid var(--line); }
+  section h2 { margin: 1.4rem 0; font: 400 1rem var(--mono); }
+  section a { display: grid; grid-template-columns: 6rem 1fr auto; gap: 2rem; align-items: center; padding: 1.4rem 0; border-bottom: 1px solid var(--line); }
+  section strong { font: 500 clamp(1rem, 2vw, 1.5rem) var(--sans); }
+  @media(max-width: 650px) { section { display: block; } section a { grid-template-columns: 4rem 1fr; } section a span:last-child { grid-column: 2; } }
+</style>

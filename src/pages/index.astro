@@ -1,0 +1,59 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ProjectList from '../components/ProjectList.astro';
+import WritingList from '../components/WritingList.astro';
+const projects = await getCollection('projects');
+const featured = projects.filter(p => p.data.featured).sort((a, b) => b.data.year - a.data.year);
+const writings = (await getCollection('writings', ({ data }) => !data.draft)).sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+const current = projects.filter(p => p.data.status === 'In Development');
+---
+<BaseLayout>
+  <section class="hero shell" aria-labelledby="hero-title">
+    <p class="eyebrow">YARONG / DIGITAL ARCHIVE / 2026</p>
+    <h1 id="hero-title"><span class="hero-line">I BUILD SYSTEMS.</span><span class="hero-line hero-line-muted">I WRITE WHAT REMAINS.</span></h1>
+    <div class="hero-bottom">
+      <p>기술로 구조를 만들고,<br />문장으로 남은 것을 기록합니다.</p>
+      <nav aria-label="홈 바로가기"><a href="/projects">Projects</a><a href="/writings">Writings</a><a href="/archive">Archive</a></nav>
+    </div>
+  </section>
+
+  <section class="section shell">
+    <div class="section-head"><div><p class="eyebrow">01 / Selected work</p><h2>Selected Projects</h2></div><a class="arrow-link" href="/projects">View all</a></div>
+    <ProjectList projects={featured} />
+  </section>
+
+  <section class="section shell">
+    <div class="section-head"><div><p class="eyebrow">02 / Recent entries</p><h2>최근 글</h2></div><a class="arrow-link" href="/writings">Read all</a></div>
+    <WritingList writings={writings.slice(0, 4)} />
+  </section>
+
+  <section class="section shell current">
+    <div class="section-head"><div><p class="eyebrow">03 / In progress</p><h2>현재 진행 중</h2></div></div>
+    <ol>{current.map((p, i) => <li><span class="meta">0{i + 1}</span><a href={`/projects/${p.id}/`}>{p.data.title}</a><span class="meta">{p.data.category}</span></li>)}</ol>
+  </section>
+
+  <section class="section shell about-summary">
+    <p class="eyebrow">04 / About</p>
+    <p>코드와 문장 사이를 오가며,<br />작동하는 것과 남는 것을 만듭니다.</p>
+    <a class="arrow-link" href="/about">More about Yarong</a>
+  </section>
+</BaseLayout>
+<style>
+  .hero { min-height: 100svh; display: flex; flex-direction: column; justify-content: space-between; padding-top: clamp(8rem, 16vh, 12rem); padding-bottom: 2.5rem; }
+  .hero h1 { margin: auto 0; font: 500 clamp(2rem, 8.6vw, 7.5rem)/.9 var(--sans); letter-spacing: -.067em; }
+  .hero-line { display: block; width: max-content; max-width: 100%; white-space: nowrap; animation: hero-line-reveal 600ms var(--ease) both; }
+  .hero-line:nth-child(1) { animation-delay: 70ms; }
+  .hero-line:nth-child(2) { animation-delay: 200ms; }
+  .hero-line-muted { color: var(--muted); }
+  @keyframes hero-line-reveal { from { opacity: 0; transform: translateY(22px); } }
+  .hero-bottom { display: flex; justify-content: space-between; align-items: end; border-top: 1px solid var(--line); padding-top: 1.5rem; }
+  .hero-bottom p { margin: 0; color: var(--muted); font-size: clamp(.9rem, .8vw, .98rem); line-height: 1.7; }
+  .hero-bottom nav { display: flex; gap: 2rem; font: clamp(.76rem, .7vw, .84rem) var(--mono); text-transform: uppercase; letter-spacing: .07em; }
+  .current ol { list-style: none; margin: 0; padding: 0; }
+  .current li { display: grid; grid-template-columns: 3rem 1fr auto; gap: 1rem; padding: 1.5rem 0; border-bottom: 1px solid var(--line); align-items: center; }
+  .current li a { font: 500 clamp(1.2rem, 2vw, 1.7rem) var(--sans); }
+  .about-summary > p:nth-child(2) { max-width: 1100px; margin: 2rem 0 3rem; font: 500 clamp(2.6rem, 6vw, 6rem)/1.04 var(--sans); letter-spacing: -.055em; }
+  @media (max-width: 600px) { .hero { padding-top: 7rem; padding-bottom: 1.5rem; } .hero-bottom nav { width: 100%; justify-content: space-between; gap: .75rem; } .hero-bottom p { display: none; } .current li { grid-template-columns: 2rem 1fr; } .current li > :last-child { grid-column: 2; } }
+  @media (prefers-reduced-motion: reduce) { .hero-line { animation: none; } }
+</style>

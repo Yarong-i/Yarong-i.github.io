@@ -1,0 +1,27 @@
+---
+const path = Astro.url.pathname;
+const links: ReadonlyArray<readonly [string, string]> = [['/projects', 'Projects'], ['/writings', 'Writings'], ['/archive', 'Archive'], ['/about', 'About']];
+---
+<header class="header">
+  <div class="shell inner">
+    <a class="logo" href="/" aria-label="YARONG 홈">YARONG</a>
+    <nav aria-label="주요 메뉴">
+      {links.map(([href, label]) => <a href={href} aria-current={path.startsWith(href) ? 'page' : undefined}>{label}</a>)}
+    </nav>
+  </div>
+</header>
+<style>
+  .header { position: absolute; inset: 0 0 auto; z-index: 10; padding: 1.7rem 0; }
+  .inner { display: flex; justify-content: space-between; align-items: center; }
+  .logo { flex: 0 0 auto; font: 600 clamp(.92rem, .85vw, 1.02rem) var(--sans); letter-spacing: .18em; }
+  nav { display: flex; flex: 0 0 auto; gap: clamp(1rem, 3vw, 2.5rem); }
+  nav a { color: var(--muted); font: 400 clamp(.76rem, .7vw, .84rem) var(--mono); letter-spacing: .055em; white-space: nowrap; transition: color 200ms; }
+  nav a:hover, nav a[aria-current='page'] { color: var(--text); }
+  @media (max-width: 560px) {
+    .header { padding-top: 1.2rem; }
+    .inner { gap: .5rem; padding-inline: clamp(.75rem, 3vw, 1.25rem); }
+    .logo { font-size: clamp(.78rem, 3.5vw, .88rem); letter-spacing: .12em; }
+    nav { gap: clamp(.3rem, 1.3vw, .5rem); }
+    nav a { font-size: clamp(.625rem, calc(.5rem + .55vw), .72rem); letter-spacing: .015em; }
+  }
+</style>

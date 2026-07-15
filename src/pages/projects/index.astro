@@ -1,0 +1,9 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ProjectList from '../../components/ProjectList.astro';
+const projects = (await getCollection('projects')).sort((a, b) => b.data.year - a.data.year);
+---
+<BaseLayout title="Projects — YARONG" description="Yarong의 프로젝트 아카이브">
+  <div class="page shell reveal"><p class="eyebrow">Systems / Tools / Experiments</p><h1 class="page-title">Projects</h1><ProjectList projects={projects} /></div>
+</BaseLayout>

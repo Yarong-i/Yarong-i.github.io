@@ -1,0 +1,32 @@
+---
+import { getCollection, render } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+export async function getStaticPaths() {
+  const projects = await getCollection('projects');
+  return projects.map(project => ({ params: { id: project.id }, props: { project } }));
+}
+const { project } = Astro.props;
+const { Content } = await render(project);
+---
+<BaseLayout title={`${project.data.title} — YARONG`} description={project.data.description}>
+  <article class="page shell reveal">
+    <a class="eyebrow" href="/projects">← Projects</a>
+    <h1 class="detail-title">{project.data.title}</h1>
+    <div class="facts">
+      <div><span>Category</span><strong>{project.data.category}</strong></div><div><span>Status</span><strong>{project.data.status}</strong></div><div><span>Year</span><strong>{project.data.year}</strong></div><div><span>Access</span><strong>{project.data.private ? 'Private' : 'Public'}</strong></div>
+    </div>
+    <p class="lead">{project.data.description}</p>
+    <ul class="tag-list">{project.data.technologies.map((t: string) => <li class="tag">{t}</li>)}</ul>
+    <div class="prose body"><Content /></div>
+  </article>
+</BaseLayout>
+<style>
+  .detail-title { margin: 2rem 0 clamp(4rem, 9vw, 8rem); max-width: 1100px; font: 500 clamp(3.2rem, 9vw, 8rem)/.9 var(--sans); letter-spacing: -.06em; }
+  .facts { display: grid; grid-template-columns: repeat(4, 1fr); border-block: 1px solid var(--line); }
+  .facts div { padding: 1.3rem 1.3rem 1.3rem 0; border-right: 1px solid var(--line); }
+  .facts div:not(:first-child) { padding-left: 1.3rem; } .facts div:last-child { border: 0; }
+  .facts span, .facts strong { display: block; font: .65rem var(--mono); } .facts span { margin-bottom: .7rem; color: var(--faint); text-transform: uppercase; } .facts strong { color: var(--muted); font-weight: 400; }
+  .lead { max-width: 850px; margin: clamp(4rem, 8vw, 7rem) 0 2rem; font: 400 clamp(1.6rem, 4vw, 3.3rem)/1.35 var(--sans); letter-spacing: -.035em; }
+  .body { margin-top: clamp(5rem, 10vw, 9rem); }
+  @media(max-width: 650px) { .facts { grid-template-columns: repeat(2, 1fr); } .facts div:nth-child(2) { border-right: 0; } .facts div:nth-child(-n+2) { border-bottom: 1px solid var(--line); } }
+</style>
