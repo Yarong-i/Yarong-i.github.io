@@ -14,7 +14,7 @@ export function getWritingExcerpt(writing: CollectionEntry<'writings'>): string 
       .replace(/[*_`~]/g, '')
       .trim())
     .filter(Boolean)
-    .slice(0, 3);
+    .slice(0, 2);
 
   return lines.join(' ');
 }
