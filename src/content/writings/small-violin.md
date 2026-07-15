@@ -1,11 +1,16 @@
 ---
-title: 작은 바이올린
+title: "작은 바이올린"
+writtenAt: 2026-07-09
 publishedAt: 2026-07-15
-tags: [시, 단상]
-category: Poetry
-draft: true
+category: poetry
+tags:
+  - "바이올린"
+  - "감정"
+draft: false
 ---
 
-이곳에 「작은 바이올린」의 원문이 들어갑니다.
-
-현재는 콘텐츠 구조와 레이아웃 확인을 위한 placeholder입니다.
+작은 바이올린 큰 바이올린 
+활은 왔다갔다 
+현은 눌리고
+그 사이 음이탈이 
+현을 놓아버린 날 정의하네

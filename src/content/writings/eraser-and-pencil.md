@@ -1,5 +1,6 @@
 ---
 title: 지우개와 연필
+writtenAt: 2026-07-09
 publishedAt: 2026-07-15
 tags: [짧은 글, 기록]
 category: poetry
