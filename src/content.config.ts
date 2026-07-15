@@ -15,6 +15,21 @@ const projects = defineCollection({
     private: z.boolean().default(false),
     repository: z.url().optional(),
     cover: z.string().optional(),
+    caseStudy: z.object({
+      subtitle: z.string(),
+      meta: z.string(),
+      overview: z.array(z.string()),
+      problems: z.array(z.string()),
+      pipeline: z.array(z.string()),
+      capabilities: z.array(z.string()),
+      principles: z.array(z.object({
+        title: z.string(),
+        description: z.string(),
+      })),
+      safety: z.array(z.string()),
+      status: z.array(z.string()),
+      closing: z.string(),
+    }).optional(),
   }),
 });
 

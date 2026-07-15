@@ -7,18 +7,72 @@ export async function getStaticPaths() {
 }
 const { project } = Astro.props;
 const { Content } = await render(project);
+const caseStudy = project.data.caseStudy;
 ---
 <BaseLayout title={`${project.data.title} — YARONG`} description={project.data.description}>
-  <article class="page shell reveal">
-    <a class="eyebrow" href="/projects">← Projects</a>
-    <h1 class="detail-title">{project.data.title}</h1>
-    <div class="facts">
-      <div><span>Category</span><strong>{project.data.category}</strong></div><div><span>Status</span><strong>{project.data.status}</strong></div><div><span>Year</span><strong>{project.data.year}</strong></div><div><span>Access</span><strong>{project.data.private ? 'Private' : 'Public'}</strong></div>
-    </div>
-    <p class="lead">{project.data.description}</p>
-    <ul class="tag-list">{project.data.technologies.map((t: string) => <li class="tag">{t}</li>)}</ul>
-    <div class="prose body"><Content /></div>
-  </article>
+  {caseStudy ? (
+    <article class="page case-study reveal">
+      <header class="case-hero shell">
+        <a class="eyebrow" href="/projects">← Projects</a>
+        <h1 class="detail-title">{project.data.title}</h1>
+        <p class="case-subtitle">{caseStudy.subtitle}</p>
+        <p class="case-meta meta">{caseStudy.meta}</p>
+        <p class="lead">{project.data.description}</p>
+      </header>
+
+      <section class="case-section shell split" aria-labelledby="overview-title">
+        <div class="section-label"><p class="eyebrow">01 / Context</p><h2 id="overview-title">Overview</h2></div>
+        <div class="section-copy">{caseStudy.overview.map((paragraph: string) => <p>{paragraph}</p>)}</div>
+      </section>
+
+      <section class="case-section shell split" aria-labelledby="problem-title">
+        <div class="section-label"><p class="eyebrow">02 / Friction</p><h2 id="problem-title">Problem</h2></div>
+        <ol class="problem-list">{caseStudy.problems.map((problem: string, index: number) => <li><span class="meta">{String(index + 1).padStart(2, '0')}</span><p>{problem}</p></li>)}</ol>
+      </section>
+
+      <section class="case-section shell" aria-labelledby="pipeline-title">
+        <div class="case-heading"><p class="eyebrow">03 / Process</p><h2 id="pipeline-title">Research Pipeline</h2></div>
+        <ol class="pipeline">{caseStudy.pipeline.map((step: string, index: number) => <li><span>{String(index + 1).padStart(2, '0')}</span><strong>{step}</strong></li>)}</ol>
+      </section>
+
+      <section class="case-section shell split" aria-labelledby="capabilities-title">
+        <div class="section-label"><p class="eyebrow">04 / System</p><h2 id="capabilities-title">Core Capabilities</h2></div>
+        <ul class="capability-list">{caseStudy.capabilities.map((capability: string, index: number) => <li><span class="meta">{String(index + 1).padStart(2, '0')}</span><strong>{capability}</strong></li>)}</ul>
+      </section>
+
+      <section class="case-section shell" aria-labelledby="principles-title">
+        <div class="case-heading"><p class="eyebrow">05 / Criteria</p><h2 id="principles-title">Validation Principles</h2></div>
+        <dl class="principles">{caseStudy.principles.map((principle) => <div><dt>{principle.title}</dt><dd>{principle.description}</dd></div>)}</dl>
+      </section>
+
+      <section class="safety" aria-labelledby="safety-title">
+        <div class="shell safety-inner"><div><p class="eyebrow">06 / Boundary</p><h2 id="safety-title">Safety Boundary</h2></div><ul>{caseStudy.safety.map((item: string) => <li>{item}</li>)}</ul></div>
+      </section>
+
+      <section class="case-section shell split" aria-labelledby="technology-title">
+        <div class="section-label"><p class="eyebrow">07 / Stack</p><h2 id="technology-title">Technology</h2></div>
+        <ul class="technology-list">{project.data.technologies.map((technology: string) => <li>{technology}</li>)}</ul>
+      </section>
+
+      <section class="case-section shell split" aria-labelledby="status-title">
+        <div class="section-label"><p class="eyebrow">08 / Now</p><h2 id="status-title">Current Status</h2></div>
+        <ul class="status-list">{caseStudy.status.map((item: string) => <li>{item}</li>)}</ul>
+      </section>
+
+      <footer class="closing shell"><p>{caseStudy.closing}</p></footer>
+    </article>
+  ) : (
+    <article class="page shell reveal">
+      <a class="eyebrow" href="/projects">← Projects</a>
+      <h1 class="detail-title">{project.data.title}</h1>
+      <div class="facts">
+        <div><span>Category</span><strong>{project.data.category}</strong></div><div><span>Status</span><strong>{project.data.status}</strong></div><div><span>Year</span><strong>{project.data.year}</strong></div><div><span>Access</span><strong>{project.data.private ? 'Private' : 'Public'}</strong></div>
+      </div>
+      <p class="lead">{project.data.description}</p>
+      <ul class="tag-list">{project.data.technologies.map((t: string) => <li class="tag">{t}</li>)}</ul>
+      <div class="prose body"><Content /></div>
+    </article>
+  )}
 </BaseLayout>
 <style>
   .detail-title { margin: 2rem 0 clamp(4rem, 9vw, 8rem); max-width: 1100px; font: 500 clamp(3.2rem, 9vw, 8rem)/.9 var(--sans); letter-spacing: -.06em; }
@@ -28,5 +82,61 @@ const { Content } = await render(project);
   .facts span, .facts strong { display: block; font: .65rem var(--mono); } .facts span { margin-bottom: .7rem; color: var(--faint); text-transform: uppercase; } .facts strong { color: var(--muted); font-weight: 400; }
   .lead { max-width: 850px; margin: clamp(4rem, 8vw, 7rem) 0 2rem; font: 400 clamp(1.6rem, 4vw, 3.3rem)/1.35 var(--sans); letter-spacing: -.035em; }
   .body { margin-top: clamp(5rem, 10vw, 9rem); }
+  .case-study { padding-top: clamp(9rem, 17vw, 14rem); }
+  .case-hero { padding-bottom: clamp(6rem, 12vw, 11rem); }
+  .case-hero .detail-title { margin-bottom: 1.5rem; text-transform: uppercase; }
+  .case-subtitle { margin: 0; font: 400 clamp(1.1rem, 2vw, 1.75rem)/1.3 var(--mono); letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+  .case-meta { margin: 1.2rem 0 0; }
+  .case-hero .lead { max-width: 1050px; margin-bottom: 0; }
+  .case-section { padding-block: clamp(5rem, 10vw, 9rem); border-top: 1px solid var(--line); }
+  .split { display: grid; grid-template-columns: minmax(15rem, 1fr) minmax(0, 2fr); gap: clamp(3rem, 8vw, 8rem); }
+  .section-label h2, .case-heading h2, .safety h2 { margin: 1rem 0 0; font: 500 clamp(2.3rem, 5vw, 4.8rem)/.95 var(--sans); letter-spacing: -.05em; }
+  .section-copy { max-width: 760px; }
+  .section-copy p { margin: 0 0 2rem; font-size: clamp(1.08rem, 1.5vw, 1.3rem); line-height: 1.9; word-break: keep-all; }
+  .problem-list, .capability-list, .technology-list, .status-list, .safety ul, .pipeline { margin: 0; padding: 0; list-style: none; }
+  .problem-list { border-top: 1px solid var(--line); }
+  .problem-list li { display: grid; grid-template-columns: 3rem 1fr; gap: 1rem; padding: 1.4rem 0; border-bottom: 1px solid var(--line); }
+  .problem-list p { margin: 0; font-size: clamp(1rem, 1.3vw, 1.16rem); line-height: 1.7; }
+  .case-heading { margin-bottom: clamp(3rem, 7vw, 6rem); }
+  .pipeline { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-top: 1px solid var(--line); }
+  .pipeline li { position: relative; min-height: 180px; padding: 1.2rem .8rem 1.2rem 0; border-bottom: 1px solid var(--line); }
+  .pipeline li:not(:last-child) { border-right: 1px solid var(--line); }
+  .pipeline li:not(:first-child) { padding-left: .8rem; }
+  .pipeline li:not(:last-child)::after { content: '→'; position: absolute; right: .65rem; bottom: 1rem; color: var(--faint); font-family: var(--mono); }
+  .pipeline span { display: block; color: var(--faint); font: .7rem var(--mono); }
+  .pipeline strong { display: block; margin-top: 4rem; font: 500 clamp(.78rem, 1vw, 1rem)/1.35 var(--mono); text-transform: uppercase; overflow-wrap: anywhere; }
+  .capability-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--line); }
+  .capability-list li { display: grid; grid-template-columns: 2.5rem 1fr; gap: .5rem; min-height: 115px; padding: 1.3rem; border-bottom: 1px solid var(--line); }
+  .capability-list li:nth-child(odd) { border-right: 1px solid var(--line); padding-left: 0; }
+  .capability-list strong { font: 400 clamp(.95rem, 1.3vw, 1.12rem)/1.6 var(--body); }
+  .principles { margin: 0; border-top: 1px solid var(--line); }
+  .principles > div { display: grid; grid-template-columns: minmax(14rem, 1fr) 2fr; gap: 3rem; padding: 1.8rem 0; border-bottom: 1px solid var(--line); }
+  .principles dt { font: 500 clamp(1rem, 1.6vw, 1.35rem)/1.4 var(--sans); overflow-wrap: anywhere; }
+  .principles dd { margin: 0; color: var(--muted); font-size: 1rem; line-height: 1.75; }
+  .safety { background: var(--text); color: var(--bg); }
+  .safety-inner { display: grid; grid-template-columns: 1fr 2fr; gap: clamp(3rem, 8vw, 8rem); padding-block: clamp(5rem, 10vw, 9rem); }
+  .safety .eyebrow { color: #555550; }
+  .safety ul { border-top: 1px solid rgba(8, 8, 8, .35); }
+  .safety li { padding: 1.4rem 0; border-bottom: 1px solid rgba(8, 8, 8, .35); font-size: clamp(1rem, 1.5vw, 1.2rem); }
+  .technology-list, .status-list { border-top: 1px solid var(--line); }
+  .technology-list li, .status-list li { padding: 1.25rem 0; border-bottom: 1px solid var(--line); font: 400 clamp(.9rem, 1.2vw, 1.05rem)/1.5 var(--mono); }
+  .status-list li { font-family: var(--body); }
+  .closing { padding-block: clamp(7rem, 15vw, 14rem); border-top: 1px solid var(--line); }
+  .closing p { max-width: 1100px; margin: 0; font: 500 clamp(2.7rem, 7vw, 7rem)/1.02 var(--sans); letter-spacing: -.055em; word-break: keep-all; }
   @media(max-width: 650px) { .facts { grid-template-columns: repeat(2, 1fr); } .facts div:nth-child(2) { border-right: 0; } .facts div:nth-child(-n+2) { border-bottom: 1px solid var(--line); } }
+  @media(max-width: 1024px) {
+    .pipeline { grid-template-columns: 1fr; }
+    .pipeline li { display: grid; grid-template-columns: 2.5rem 1fr; gap: 1rem; align-items: center; min-height: 0; padding: 1.2rem 0; border-right: 0 !important; }
+    .pipeline li:not(:first-child) { padding-left: 0; }
+    .pipeline li:not(:last-child)::after { content: '↓'; right: 0; bottom: .9rem; }
+    .pipeline strong { margin-top: 0; }
+  }
+  @media(max-width: 720px) {
+    .split, .safety-inner { grid-template-columns: 1fr; gap: 3rem; }
+    .capability-list { grid-template-columns: 1fr; }
+    .capability-list li, .capability-list li:nth-child(odd) { min-height: 0; padding: 1.2rem 0; border-right: 0; }
+    .principles > div { grid-template-columns: 1fr; gap: .75rem; }
+    .case-subtitle { max-width: 18rem; }
+    .closing p { font-size: clamp(2.5rem, 12vw, 4rem); }
+  }
 </style>
