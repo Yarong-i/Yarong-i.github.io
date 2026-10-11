@@ -1,15 +1,23 @@
 ---
 import type { CollectionEntry } from 'astro:content';
+import { stageLabel, projectSummary } from '../utils/projects';
 interface Props { projects: CollectionEntry<'projects'>[]; }
 const { projects } = Astro.props;
 ---
-<div class="project-list">
+<div class="project-list" data-project-list>
   {projects.map((project, index) => (
-    <a class="project-row" href={`/projects/${project.id}/`}>
+    <a class="project-row" href={`/projects/${project.id}/`} data-stage={project.data.stage ?? ''}>
       <span class="number">{String(index + 1).padStart(2, '0')}</span>
-      <div><h2>{project.data.title}</h2><p>{project.data.description}</p></div>
+      <div>
+        <h2>{project.data.title}</h2>
+        {project.data.alias && <span class="alias">{project.data.alias}</span>}
+        <p>{projectSummary(project)}</p>
+      </div>
       <span class="category meta">{project.data.category}</span>
-      <span class="status meta">{project.data.status}</span>
+      <span class="status meta">{stageLabel(project)}</span>
     </a>
   ))}
 </div>
+<style>
+  .alias { display: block; margin-top: .35rem; color: var(--faint); font: 500 .78rem/1.4 var(--body); }
+</style>

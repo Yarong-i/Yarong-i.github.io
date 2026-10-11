@@ -2,10 +2,12 @@
 title: YarongSkills
 description: Minecraft RPG 직업, 스탯, 전투, 보스 시스템 플러그인
 category: Game Development
-status: In Development
+stage: paused
+progress:
+  - "Minecraft RPG의 큰 틀을 만들었습니다."
+reason: "프로젝트 규모가 커지면서 작업을 이어가지 못하고 있습니다."
 year: 2026
 technologies: [Java, Paper API, Minecraft]
-featured: true
 private: false
 ---
 

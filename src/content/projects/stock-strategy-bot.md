@@ -1,12 +1,15 @@
 ---
-title: STOCK-STRATEGY-BOT
+title: 주식 전략 연구
+summary: "수급 데이터를 확보하고, 이를 바탕으로 매매 가설을 세우며 연구하고 있습니다."
 description: 전략 백테스트, paper trading, live execution을 분리한 자동매매 시스템
-category: Automation & Finance
-status: In Development
-year: 2026
-technologies: [Python, Backtesting, Trading API]
-featured: true
-private: false
+category: 금융·데이터 연구
+stage: active
+home: 2
+earlier:
+  name: STOCK-STRATEGY-BOT
+  year: 2026
+  technologies: [Python, Backtesting, Trading API]
+  private: false
 ---
 
 ## Overview

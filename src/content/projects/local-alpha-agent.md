@@ -1,11 +1,13 @@
 ---
-title: Local Alpha Agent
+title: Local / Autonomous Alpha Agent
+summary: "직접 학습한 모델로 미래 주가를 예측할 수 있는지 연구했습니다."
 description: 시장 데이터와 투자 가설을 재현 가능한 연구 과정으로 변환하는 오프라인 투자 연구 시스템.
 category: AI & Finance
-status: Private Research
+stage: paused
+result: "시도한 조건에서는 실제로 활용하기에 적절한 예측 성능을 확인하지 못했습니다."
+reason: "활용하기에 적절한 예측 성능을 확인하지 못해 보류했습니다."
 year: 2026
 technologies: [Python, SQLite, pandas, LightGBM, Time-series validation, Static research reports]
-featured: true
 private: true
 caseStudy:
   subtitle: Offline Investment Research System

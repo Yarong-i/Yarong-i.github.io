@@ -6,7 +6,7 @@ import { stdin as input, stdout as output } from 'node:process';
 
 const rl = createInterface({ input, output });
 const writingsDirectory = resolve('src/content/writings');
-const categories = new Set(['poetry', 'prose', 'fragment']);
+const categories = new Set(['poetry', 'prose', 'fragment', '세계관·소설']);
 
 const today = () => {
   const date = new Date();
@@ -62,9 +62,9 @@ async function askWrittenAt() {
 
 async function askCategory() {
   while (true) {
-    const value = (await rl.question('Category (poetry / prose / fragment): ')).trim().toLowerCase();
+    const value = (await rl.question('Category (poetry / prose / fragment / 세계관·소설): ')).trim().toLowerCase();
     if (categories.has(value)) return value;
-    output.write('poetry, prose, fragment 중 하나를 입력해 주세요.\n');
+    output.write('poetry, prose, fragment, 세계관·소설 중 하나를 입력해 주세요.\n');
   }
 }
 

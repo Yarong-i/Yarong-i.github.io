@@ -1,0 +1,114 @@
+---
+// Research flow drawn from a project's case-study data (pipeline steps, checkpoint, failure lane, scope,
+// separation from live execution, current step). Parts whose source data is missing are not drawn.
+import type { CollectionEntry } from 'astro:content';
+type Study = NonNullable<CollectionEntry<'projects'>['data']['caseStudy']>;
+interface Props { study: Study; }
+const { study } = Astro.props;
+const steps = study.pipeline;
+const principle = (title: string) => study.principles.find((item) => item.title === title);
+const guarded = principle('Guarded progression');
+const failures = principle('Failure preservation');
+const separation = principle('Separation from live execution');
+const scope = study.safety[0];
+const now = study.status.find((item) => item.includes('shadow'));
+const nowIndex = now ? steps.findIndex((step) => step.toLowerCase().includes('shadow')) : -1;
+const number = (index: number) => String(index + 1).padStart(2, '0');
+---
+<figure class="flow">
+  <figcaption>
+    <span>How the research moves</span>
+    {now && <span class="flow-now"><i aria-hidden="true"></i>{now}</span>}
+  </figcaption>
+
+  <div class="flow-body">
+    <div class="flow-grid">
+      <div class="scope-frame" aria-hidden="true"></div>
+      {scope && <p class="scope-label">RESEARCH SCOPE · {scope}</p>}
+      {guarded && <p class="scope-note"><span class="gate-mark" aria-hidden="true"></span>{guarded.description}</p>}
+      <ol class:list={['steps', { 'has-lane': !!failures }]}>
+        {steps.map((step, i) => (
+          <li class="step" aria-current={i === nowIndex ? 'step' : undefined}>
+            <div class="step-box" data-box>
+              <span class="step-num">{number(i)}</span>
+              <span class="step-name">{step}</span>
+            </div>
+            {i === nowIndex && <span class="now-dot" aria-hidden="true"></span>}
+            {i < steps.length - 1 && <span class="junction" aria-hidden="true"></span>}
+          </li>
+        ))}
+      </ol>
+      {failures && <p class="lane"><strong>{failures.title}</strong><span>{failures.description}</span></p>}
+      {separation && <span class="blocked" aria-hidden="true"></span>}
+      {separation && <div class="outside" data-box><span class="step-name">{separation.title}</span></div>}
+      {separation && <p class="outside-note">{separation.description}</p>}
+    </div>
+  </div>
+</figure>
+<style>
+  /* Dark-surface colours for the diagram (it now lives on the project detail page). */
+  .flow { --ink: var(--text); --ink-muted: var(--muted); --paper: var(--bg); --paper-node: var(--surface); --lane: #1D2128; }
+  .flow { margin: 0; }
+  .flow figcaption { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .5rem 2rem; margin-bottom: 1rem; color: var(--ink-muted); font: 500 .76rem/1.5 var(--body); letter-spacing: .1em; text-transform: uppercase; }
+  .flow-now { display: inline-flex; align-items: center; gap: .55rem; color: var(--ink); letter-spacing: .02em; text-transform: none; }
+  .flow-now i { width: .6rem; height: .6rem; border: 2px solid var(--ink); border-radius: 50%; background: var(--paper-node); }
+  /* Research flow, drawn in HTML so every box grows with its text after the web font loads (no SVG text
+     measurement). Vertical by default; a container query switches to the horizontal row only when all
+     seven boxes fit at their narrowest (longest word plus padding). One grid holds everything; the dashed
+     research-scope frame is a background item spanning rows 1–4, and the live-execution box sits below it. */
+  .flow-body { container: flow / inline-size; }
+  .flow-grid { --pad: clamp(1rem, 2.4vw, 1.5rem); --gap: 2rem; --lane-gap: 1.5rem; --link-x: 1.4rem;
+    display: grid; grid-template-columns: minmax(0, 1fr); position: relative; }
+  .scope-frame { grid-row: 1 / 5; grid-column: 1; border: 1px dashed var(--ink); }
+  .scope-label { grid-row: 1; grid-column: 1; margin: var(--pad) var(--pad) 0; font: 600 .78rem/1.5 var(--body); letter-spacing: .03em; }
+  .scope-note { grid-row: 2; grid-column: 1; display: flex; gap: .65rem; align-items: baseline; margin: .55rem var(--pad) 0; color: var(--ink-muted); font-size: .82rem; line-height: 1.5; }
+  .gate-mark { flex: none; width: .5rem; height: .5rem; background: var(--ink); transform: translateY(-.05rem) rotate(45deg); }
+
+  .steps { grid-row: 3; grid-column: 1; position: relative; display: grid; gap: var(--gap); margin: 1.5rem var(--pad) 0; padding: 0; list-style: none; }
+  .steps.has-lane { padding-right: 2.5rem; }
+  .step { position: relative; display: grid; }
+  .step-box { display: flex; align-items: baseline; gap: .85rem; padding: .8rem 1rem; border: 1.2px solid var(--ink); background: var(--paper-node); }
+  .step[aria-current='step'] .step-box { border-width: 2.4px; padding: calc(.8rem - 1.2px) calc(1rem - 1.2px); }
+  .step-num { flex: none; color: var(--ink-muted); font: 600 .7rem/1.3 var(--body); letter-spacing: .08em; }
+  .step-name { font: 600 .95rem/1.3 var(--body); letter-spacing: -.005em; overflow-wrap: normal; word-break: normal; hyphens: none; }
+  .now-dot { position: absolute; top: .75rem; right: .75rem; width: .7rem; height: .7rem; border: 2px solid var(--ink); border-radius: 50%; background: var(--paper-node); }
+  .step[aria-current='step'] .step-box { padding-right: 2rem; }
+
+  /* Vertical connectors: a solid link down the left, a checkpoint diamond in every gap, and a dashed line
+     from each checkpoint to a rail on the right that runs down into the Failure preservation lane. */
+  .step:not(:last-child)::after { content: ''; position: absolute; left: var(--link-x); top: 100%; height: var(--gap); border-left: 1.2px solid var(--ink); }
+  .junction { position: absolute; top: calc(100% + var(--gap) / 2); left: var(--link-x); right: 0; height: 0; }
+  .junction::before { content: ''; position: absolute; left: -.3rem; top: -.3rem; width: .6rem; height: .6rem; background: var(--ink); transform: rotate(45deg); }
+  .has-lane .junction { right: -1.25rem; border-top: 1px dashed var(--ink-muted); }
+  .has-lane .step:not(:first-child)::before { content: ''; position: absolute; right: -1.25rem; top: calc(var(--gap) / -2); bottom: calc(var(--gap) / -2); border-right: 1px dashed var(--ink-muted); }
+  .has-lane .step:last-child::before { bottom: calc(var(--lane-gap) * -1); }
+
+  .lane { grid-row: 4; grid-column: 1; display: grid; gap: .3rem; margin: var(--lane-gap) var(--pad) var(--pad); padding: .9rem 1rem; background: var(--lane); }
+  .lane strong { font: 600 .92rem/1.4 var(--body); }
+  .lane span { color: var(--ink-muted); font-size: .84rem; line-height: 1.55; }
+
+  /* Outside the frame: a blocked dashed connector (×) leads to the live-execution box. */
+  .blocked { grid-row: 5; grid-column: 1; position: relative; justify-self: start; height: 2.5rem; margin-left: calc(var(--pad) + var(--link-x)); border-left: 1.2px dashed var(--ink-muted); }
+  .blocked::before { content: '×'; position: absolute; top: -.72rem; left: -.42rem; width: .84rem; color: var(--ink); background: var(--paper); font: 600 1.1rem/1.2 var(--body); text-align: center; }
+  .outside { grid-row: 6; grid-column: 1; justify-self: start; width: min(calc(100% - var(--pad)), 22rem); margin-left: var(--pad); padding: .8rem 1rem; border: 1.2px dashed var(--ink-muted); }
+  .outside-note { grid-row: 7; grid-column: 1; max-width: 22rem; margin: .6rem 0 0 var(--pad); color: var(--ink-muted); font-size: .82rem; line-height: 1.55; }
+
+  /* Horizontal row: 7 columns that never get narrower than their longest word. The checkpoints sit in the
+     gaps between boxes and drop straight down into the lane; the live-execution box moves under Review. */
+  @container flow (min-width: 66rem) {
+    .flow-grid { --gap: 1.75rem; --lane-gap: 2.25rem; }
+    .steps { grid-auto-flow: column; grid-auto-columns: minmax(min-content, 1fr); margin-top: 1.75rem; }
+    .steps.has-lane { padding-right: 0; }
+    .step-box { flex-direction: column; align-items: flex-start; gap: .55rem; min-height: 6.75rem; padding: .85rem .8rem; }
+    .step[aria-current='step'] .step-box { padding: calc(.85rem - 1.2px) calc(.8rem - 1.2px); padding-right: 1.8rem; }
+    .step:not(:last-child)::after { left: 100%; top: 50%; width: var(--gap); height: 0; border-left: 0; border-top: 1.2px solid var(--ink); }
+    .junction, .has-lane .junction { top: 50%; bottom: calc(var(--lane-gap) * -1); left: calc(100% + var(--gap) / 2); right: auto; width: 0; height: auto; border-top: 0; }
+    .has-lane .junction { border-left: 1px dashed var(--ink-muted); }
+    .has-lane .step:not(:first-child)::before { content: none; }
+    .lane { grid-template-columns: max-content minmax(0, 1fr); gap: 2rem; align-items: baseline; }
+    .blocked { justify-self: end; margin: 0 calc(var(--pad) + 1.4rem) 0 0; }
+    .outside, .outside-note { justify-self: end; margin-right: var(--pad); }
+    .outside { width: 17rem; }
+    .outside-note { width: 17rem; }
+  }
+</style>

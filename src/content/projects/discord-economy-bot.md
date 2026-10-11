@@ -1,11 +1,17 @@
 ---
-title: Discord Economy Bot
+title: 롱야봇
+alias: Discord Economy Bot
+summary: "친구들과 사용하는 Discord 경제·RPG 봇입니다."
 description: 출석, 경제, 주식 게임, 예측, 상점 기능을 가진 Discord 봇
 category: Bot & Automation
-status: In Development
+stage: in-use
+home: 1
+progress:
+  - "친구들과 잘 사용하고 있습니다."
+  - "앞으로 가상 주식의 밸런스를 조정할 예정입니다."
+related: [val-index]
 year: 2025
 technologies: [Python, Discord API, Database]
-featured: false
 private: false
 ---
 

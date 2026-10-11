@@ -33,8 +33,9 @@ const tags = [...new Set(writings.flatMap(w => w.data.tags))].sort();
     const query = search?.value.trim().toLowerCase() ?? '';
     const selected = tag?.value ?? '';
     const visible = items.filter(item => {
-      const haystack = `${item.dataset.title} ${item.dataset.body} ${item.dataset.tags}`;
-      const show = haystack.includes(query) && (!selected || item.dataset.tags?.split(' ').includes(selected));
+      const itemTags: string[] = JSON.parse(item.dataset.tags || '[]');
+      const haystack = `${item.dataset.title} ${item.dataset.body} ${itemTags.join(' ')}`;
+      const show = haystack.includes(query) && (!selected || itemTags.includes(selected));
       item.hidden = !show; return show;
     });
     const direction = sort?.value === 'old' ? 1 : -1;

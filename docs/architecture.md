@@ -22,7 +22,7 @@ flowchart LR
   X --> S[https://yarong-i.github.io]
 ```
 
-Content is loaded and validated at build time. There is no database, API server, CMS request, or runtime rendering in the checked-in application. The only page-side interaction is the Writings list script, which filters and reorders already-rendered DOM entries.
+Content is loaded and validated at build time. There is no database, API server, CMS request, or runtime rendering in the checked-in application. Page-side scripts are small and optional: the Writings list script filters and reorders already-rendered DOM entries, the header script opens and closes the menu panel, `src/scripts/motion.ts` drives card light and section reveals, and the Home hero and silver section scripts turn pointer and scroll position into CSS variables. None of them runs a continuous loop. Content stays readable without any of them.
 
 ## File relationships
 
@@ -70,11 +70,11 @@ flowchart TD
   PUB --> HM[Home: first four after sorting]
 ```
 
-The projects collection has no publication filter. `featured` affects only Home's Selected Projects section; `status === 'In Development'` affects only Home's current-work section; `private` is displayed as access metadata but is not authorization.
+The projects collection has no publication filter. `home` decides which projects appear in Home's Selected Projects and in what order; `stage` drives labels and the Projects page filter; `private` is displayed as source visibility only and is not authorization.
 
 ## Writing date, search, and excerpt flow
 
-`sortWritings` treats `writtenAt` as the primary chronology, `publishedAt` as a tie-breaker/fallback ordering for undated entries, and Korean-locale title as the final stable tie-breaker. Archive uses `writtenAt` year and a final `DATE UNKNOWN` group.
+`sortWritings` treats `writtenAt` as the primary chronology, `publishedAt` as a tie-breaker/fallback ordering for undated entries, and Korean-locale title as the final stable tie-breaker. Archive uses `writtenAt` year; entries without a year form a final group with no heading.
 
 `WritingList` serializes lower-cased title, raw Markdown body, tags, and ISO dates into `data-*` attributes. The Writings page script performs substring search, exact selected-tag matching, in-DOM sorting, visible count updates, and random navigation among visible entries.
 
@@ -84,9 +84,9 @@ The projects collection has no publication filter. `featured` affects only Home'
 
 ```text
 top-level static routes (6)
-+ every project entry (5)
-+ every non-draft writing entry (23)
-= 34 HTML pages at the inspected commit
++ every project entry (12)
++ every non-draft writing entry (24)
+= 42 HTML pages at the inspected commit
 ```
 
 The six top-level pages are `/`, `/projects/`, `/writings/`, `/archive/`, `/about/`, and `/404.html` (output filename conventions are determined by Astro). A successful build is the authoritative confirmation of generated artifacts.

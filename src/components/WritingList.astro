@@ -4,11 +4,13 @@ import { getWritingExcerpt } from '../utils/writings';
 import { formatWritingDate } from '../utils/writingDates';
 interface Props { writings: CollectionEntry<'writings'>[]; searchable?: boolean; }
 const { writings, searchable = false } = Astro.props;
+// Date, category and completion joined with ' · '; parts that do not exist (e.g. no date) are left out entirely.
+const metaLine = (writing: CollectionEntry<'writings'>) => [writing.data.writtenAt && formatWritingDate(writing.data.writtenAt), writing.data.category, writing.data.unfinished && '미완성'].filter(Boolean).join(' · ');
 ---
 <div class="writing-list" data-writing-list={searchable ? '' : undefined}>
   {writings.map((writing) => (
-    <article class="writing-item" data-writing data-title={writing.data.title.toLowerCase()} data-body={(writing.body ?? '').toLowerCase()} data-tags={writing.data.tags.join(' ').toLowerCase()} data-written-at={writing.data.writtenAt?.toISOString() ?? ''} data-published-at={writing.data.publishedAt.toISOString()}>
-      <span class="meta">{writing.data.writtenAt ? formatWritingDate(writing.data.writtenAt) : 'Date unknown'} · {writing.data.category}</span>
+    <article class="writing-item" data-writing data-title={writing.data.title.toLowerCase()} data-body={(writing.body ?? '').toLowerCase()} data-tags={JSON.stringify(writing.data.tags.map((tag) => tag.toLowerCase()))} data-written-at={writing.data.writtenAt?.toISOString() ?? ''} data-published-at={writing.data.publishedAt?.toISOString() ?? ''}>
+      <span class="meta">{metaLine(writing)}</span>
       <h2><a href={`/writings/${writing.id}/`}>{writing.data.title}</a></h2>
       <p>{getWritingExcerpt(writing)}</p>
       <ul class="tag-list" aria-label="태그">{writing.data.tags.map(tag => <li class="tag">{tag}</li>)}</ul>

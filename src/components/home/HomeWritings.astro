@@ -1,0 +1,44 @@
+---
+// Home's recent writings as full-width rows: title / excerpt / date and category with an arrow.
+// Same writings, order and excerpts as before; tag chips are left to the Writings page.
+import type { CollectionEntry } from 'astro:content';
+import { getWritingExcerpt } from '../../utils/writings';
+import { formatWritingDate } from '../../utils/writingDates';
+interface Props { writings: CollectionEntry<'writings'>[]; }
+const { writings } = Astro.props;
+// Parts that do not exist (e.g. no date) are left out together with their separator.
+const meta = (writing: CollectionEntry<'writings'>) => [writing.data.writtenAt && formatWritingDate(writing.data.writtenAt), writing.data.category, writing.data.unfinished && '미완성'].filter(Boolean).join(' · ');
+---
+<ol class="wrows">
+  {writings.map((writing, i) => (
+    <li data-reveal style={`--i: ${i + 1}`}>
+      <a class="wrow" href={`/writings/${writing.id}/`}>
+        <h3 class="wrow-title">{writing.data.title}</h3>
+        <p class="wrow-excerpt">{getWritingExcerpt(writing)}</p>
+        <p class="wrow-meta"><span>{meta(writing)}</span><span class="wrow-arrow" aria-hidden="true">→</span></p>
+      </a>
+    </li>
+  ))}
+</ol>
+<style>
+  .wrows { margin: 0; padding: 0; list-style: none; border-bottom: 1px solid var(--line); }
+  .wrows li + li { border-top: 1px solid var(--line); }
+  /* One link per row. Hover and keyboard focus brighten the row slightly (plus the shared pointer light from
+     motion.ts) and nudge the arrow; nothing moves the text itself. */
+  .wrow { --mx: 50%; --my: 50%; position: relative; isolation: isolate; display: grid; grid-template-columns: minmax(10rem, 1fr) minmax(0, 2.3fr) auto; align-items: baseline; gap: clamp(1.5rem, 3vw, 3rem); padding: clamp(1.25rem, 2vw, 1.7rem) clamp(.75rem, 1.5vw, 1.25rem); transition: background-color var(--base) var(--ease); }
+  .wrow::before { content: ''; position: absolute; inset: 0; z-index: -1; opacity: 0; pointer-events: none; background: radial-gradient(30rem circle at var(--mx) var(--my), rgba(var(--light), .08), transparent 65%); transition: opacity var(--base) var(--ease); }
+  .wrow:hover, .wrow:focus-visible { background-color: rgba(var(--light), .035); }
+  .wrow:hover::before, .wrow:focus-visible::before { opacity: 1; }
+  .wrow:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+  .wrow-title { margin: 0; font: 700 clamp(1.35rem, 2vw, 1.85rem)/1.2 var(--display); letter-spacing: -.03em; }
+  .wrow-excerpt { margin: 0; color: var(--muted); font-size: clamp(.98rem, 1vw, 1.05rem); line-height: 1.65; transition: color var(--base) var(--ease); }
+  .wrow:hover .wrow-excerpt, .wrow:focus-visible .wrow-excerpt { color: var(--text); }
+  .wrow-meta { display: inline-flex; align-items: baseline; gap: 1.25rem; margin: 0; color: var(--muted); font: 500 .76rem/1.4 var(--label); letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; }
+  .wrow-arrow { color: var(--text); font-size: 1rem; transition: transform var(--base) var(--ease); }
+  .wrow:hover .wrow-arrow, .wrow:focus-visible .wrow-arrow { transform: translateX(6px); }
+
+  @media (max-width: 760px) {
+    .wrow { grid-template-columns: minmax(0, 1fr); gap: .45rem; padding-inline: 0; }
+    .wrow-meta { justify-content: space-between; margin-top: .35rem; }
+  }
+</style>

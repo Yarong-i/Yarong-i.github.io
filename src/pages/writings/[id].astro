@@ -9,16 +9,16 @@ export async function getStaticPaths() {
 }
 const { writing } = Astro.props;
 const { Content } = await render(writing);
-const writtenDate = writing.data.writtenAt ? formatWritingDate(writing.data.writtenAt, 'long') : 'Date unknown';
-const publishedDate = formatWritingDate(writing.data.publishedAt, 'long');
+const writtenDate = writing.data.writtenAt ? formatWritingDate(writing.data.writtenAt, 'long') : undefined;
+const publishedDate = writing.data.publishedAt ? formatWritingDate(writing.data.publishedAt, 'long') : undefined;
 const excerpt = getWritingExcerpt(writing);
 const isPoetry = writing.data.category.toLowerCase() === 'poetry';
 ---
 <BaseLayout title={`${writing.data.title} — YARONG`} description={excerpt}>
   <article class="page shell reveal">
     <a class="eyebrow" href="/writings">← Writings</a>
-    <header class:list={{ 'poem-header': isPoetry }}><p class="meta">{writing.data.category} · {writtenDate}</p><p class="published-meta meta">Published {publishedDate}{writing.data.updatedAt && ` · Updated ${formatWritingDate(writing.data.updatedAt, 'long')}`}</p><h1>{writing.data.title}</h1><p class="excerpt">{excerpt}</p><ul class="tag-list">{writing.data.tags.map((tag: string) => <li class="tag">{tag}</li>)}</ul></header>
-    <div class:list={['prose', 'writing-body', { poem: isPoetry }]}><Content /></div>
+    <header class:list={{ 'poem-header': isPoetry }}><p class="meta">{[writing.data.category, writtenDate].filter(Boolean).join(' · ')}</p>{writing.data.unfinished && <p class="completion">미완성</p>}{(publishedDate || writing.data.updatedAt) && <p class="published-meta meta">{publishedDate && `Published ${publishedDate}`}{publishedDate && writing.data.updatedAt && ' · '}{writing.data.updatedAt && `Updated ${formatWritingDate(writing.data.updatedAt, 'long')}`}</p>}<h1>{writing.data.title}</h1><p class="excerpt">{excerpt}</p><ul class="tag-list">{writing.data.tags.map((tag: string) => <li class="tag">{tag}</li>)}</ul></header>
+    <div class:list={['prose', 'writing-body', { poem: isPoetry, 'long-form': !isPoetry }]}><Content /></div>
   </article>
 </BaseLayout>
 <style>
@@ -30,4 +30,11 @@ const isPoetry = writing.data.category.toLowerCase() === 'poetry';
   .poem-header .excerpt { max-width: 38rem; margin-inline: auto; }
   .writing-body.poem { max-width: 34rem; font-size: clamp(1.08rem, 1.5vw, 1.2rem); line-height: 2.25; }
   .writing-body.poem :global(p) { white-space: pre-line; }
+  .completion { display: inline-block; margin: .9rem 0 0; padding: .3rem .75rem; border: 1px solid var(--line-strong); border-radius: 999px; font: 600 .8rem/1.1 var(--body); }
+  /* Prose and fiction: a narrower measure and calm leading. pre-wrap keeps the author's line breaks and spaces;
+     one blank line of space between paragraphs. The whole article fades in once; paragraphs are not animated. */
+  .writing-body.long-form { max-width: 36rem; font-size: clamp(1.02rem, 1.4vw, 1.1rem); line-height: 1.95; }
+  .writing-body.long-form :global(p) { margin: 0 0 1.95em; white-space: pre-wrap; }
+  /* Paragraphs that follow each other without an empty paragraph in the source stay together. */
+  .writing-body.long-form :global(p.joined) { margin-bottom: 0; }
 </style>
