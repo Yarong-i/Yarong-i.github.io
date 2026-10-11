@@ -10,7 +10,7 @@ This document records the repository state inspected on 2026-07-15 at commit `4a
 - Package manager: npm; `package-lock.json` uses lockfile version 3. The workflow requests `npm@latest`.
 - Node: `.nvmrc` contains `22`; `package.json` permits `>=22 <24`. Use Node.js 22. The inspection shell itself reported Node 24.18.0 and npm 11.16.0, which is outside the supported range.
 - Build: `npm run build` executes `astro check && astro build`; Astro uses `output: 'static'`.
-- Deployment: pushes to `main` trigger `.github/workflows/deploy.yml`, which builds with `withastro/action@v6`, uploads a Pages artifact, then deploys it with `actions/deploy-pages@v5`.
+- Deployment: pushes to `main` trigger `.github/workflows/deploy.yml`, which builds with `withastro/action@v6` (explicitly `node-version: '22'`), uploads a Pages artifact, then deploys it with `actions/deploy-pages@v5`.
 - Branch: `main`, tracking `origin/main`; it was clean before documentation work began.
 - Latest commit: `4a45099` (`chore: pin Node.js 22 for development`, 2026-07-15 13:45:18 +09:00).
 - Remote: `https://github.com/Yarong-i/Yarong-i.github.io.git` for fetch and push.
@@ -165,11 +165,11 @@ Do not publish API keys, tokens, `.env` values, credentials, brokerage/account/b
 
 `astro.config.mjs` sets `site: 'https://yarong-i.github.io'` and `output: 'static'`. It has no `base` because `Yarong-i.github.io` is a GitHub Pages user site served at the domain root, not a project site served at `/{repository}/`. Root-relative links such as `/projects` and `/favicon.svg` depend on that root deployment.
 
-Flow after an authorized push: `main` push → GitHub Actions checkout → `withastro/action@v6` installs with npm and runs the Astro build/upload → deploy job waits for build → `actions/deploy-pages@v5` publishes the artifact to the `github-pages` environment.
+Flow after an authorized push: `main` push → GitHub Actions checkout → `withastro/action@v6` sets up Node 22 (`node-version: '22'` in the workflow), installs with npm and runs the Astro build/upload → deploy job waits for build → `actions/deploy-pages@v5` publishes the artifact to the `github-pages` environment.
 
 Potential “works locally, fails in deployment” points:
 
-- using a Node version outside the repository range locally (notably Node 24) while the action selects a supported environment from project metadata;
+- using a Node version outside the repository range locally (notably Node 24). CI does not read `.nvmrc` or `engines`: without an explicit `node-version` the action used its default (Node 24.21.0 in the run for commit `0139de2`), so the workflow now pins `node-version: '22'`. Keep that value in step with `.nvmrc`;
 - case-sensitive path/import differences between Windows and Ubuntu;
 - untracked local files or ignored assets referenced by pages;
 - absolute filesystem paths or Windows-only separators;
