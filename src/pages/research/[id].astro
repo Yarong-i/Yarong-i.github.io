@@ -117,6 +117,9 @@ const shortDay = (iso?: string) => (iso ? iso.slice(5).replace('-', '.') : '');
                 );
               })}
             </div>
+            {run.strategy?.base && !run.strategy.base.final && (
+              <p class="provisional-note">이날 당일 값은 잠정 종가로 계산해 그날 발표된 값입니다. 다음 거래일에 종가가 확정되며, 차이가 있으면 다음 날 누적에만 반영되고 이 당일 값은 고쳐지지 않습니다.</p>
+            )}
             <p class="basis">매수 조건은 이 페이지의 규칙 확인이고, 모의 매수와 수익률은 연구 시스템 장부의 확정 값입니다. {FILTER_SCORE}점은 필터 전략의 매수 조건일 뿐 추천 공개 여부와는 관계없습니다. 비용 전 · 실제 주문 아님.</p>
           </div>
         </section>
@@ -183,6 +186,7 @@ const shortDay = (iso?: string) => (iso ? iso.slice(5).replace('-', '.') : '');
   .strat-grid dd { display: grid; grid-template-columns: 4.5rem minmax(0, 1fr); gap: .5rem; margin: 0; font-size: .88rem; font-variant-numeric: tabular-nums; }
   .k { color: var(--faint); font-weight: 600; }
   [data-buys='false'] { color: var(--muted); }
+  .provisional-note { margin: .75rem 0 0; padding: .55rem .75rem; border-left: 3px solid #E3A008; color: #F5C451; font-size: .85rem; line-height: 1.55; }
   .pager { display: flex; justify-content: space-between; gap: 1rem; margin: 3rem 0 1rem; }
   @media (max-width: 860px) { .texts { grid-template-columns: 1fr; } }
   @media (max-width: 560px) {
