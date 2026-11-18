@@ -1,15 +1,45 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 ---
-<BaseLayout title="About — YARONG" description="Yarong에 대하여">
+<BaseLayout title="About — YARONG" description="게임과 Discord 봇을 만들고 주식을 연구하는 Yarong에 대하여">
   <div class="page shell reveal"><p class="eyebrow">Profile / Seoul, KR</p><h1 class="page-title">About</h1>
-    <div class="intro"><p>코드로 시스템을 만들고,<br />글로 남은 감각을 기록합니다.</p><span class="meta">Developer / Builder / Writer</span></div>
-    <div class="grid"><h2>두 개의 기록 방식</h2><div><p>프로젝트는 문제를 구조화하고 작동하는 형태로 옮긴 기록입니다. 자동화, 금융, 게임 개발, 도구 제작을 탐구합니다.</p><p>글은 구조 바깥에 남은 생각과 감각을 보관하는 방식입니다. 시와 짧은 산문을 천천히 쌓아갑니다.</p></div></div>
+    <div class="intro"><p>게임과 Discord 봇을 만들고,<br />주식을 연구합니다.</p><span class="meta">Developer / Builder</span></div>
+    <div class="grid"><h2>하는 일</h2><div>
+      <p>프로젝트는 문제를 구조화하고 작동하는 형태로 옮긴 기록입니다. 자동화, 금융, 게임 개발, 도구 제작을 탐구합니다.</p>
+      <ul class="links">
+        <li><a class="arrow-link" href="/projects">프로젝트</a></li>
+        <li><a class="arrow-link" href="/research">주식 연구</a></li>
+        <li><a class="arrow-link" href="/portfolio">포트폴리오</a></li>
+      </ul>
+    </div></div>
     <div class="grid"><h2>Contact</h2><div><a class="arrow-link" href="https://github.com/Yarong-i" rel="me">GitHub / Yarong-i</a></div></div>
+
+    <details class="personal">
+      <summary>개인 기록</summary>
+      <div class="personal-body">
+        <p class="meta">Writer</p>
+        <p>코드로 시스템을 만들고, 글로 남은 감각을 기록합니다.</p>
+        <p>글은 구조 바깥에 남은 생각과 감각을 보관하는 방식입니다. 시와 짧은 산문을 천천히 쌓아갑니다.</p>
+        <a class="arrow-link" href="/writings">글 보관함</a>
+      </div>
+    </details>
   </div>
 </BaseLayout>
 <style>
-  .intro { padding-bottom: clamp(6rem, 12vw, 11rem); } .intro > p { max-width: 1000px; margin: 0 0 2rem; font: 500 clamp(2.5rem, 6vw, 5.8rem)/1.08 var(--sans); letter-spacing: -.055em; }
+  .intro { padding-bottom: clamp(4rem, 9vw, 7rem); } .intro > p { max-width: 1000px; margin: 0 0 2rem; font: 500 clamp(2.3rem, 5.5vw, 5rem)/1.1 var(--sans); letter-spacing: -.055em; }
   .grid { display: grid; grid-template-columns: 1fr 2fr; gap: 4rem; padding: 4rem 0; border-top: 1px solid var(--line); } .grid h2 { margin: 0; font: 500 1.1rem var(--sans); } .grid p { max-width: 650px; margin: 0 0 2rem; color: var(--muted); font-size: 1.05rem; }
-  @media(max-width: 650px) { .grid { grid-template-columns: 1fr; gap: 2rem; } }
+  .links { display: flex; flex-wrap: wrap; gap: .5rem 2rem; margin: 0; padding: 0; list-style: none; }
+  .links a { min-height: 2.5rem; }
+  /* Personal record: closed by default; the archive link is only inside. Native details/summary works with
+     keyboard (Enter/Space) and touch without any script. */
+  .personal { margin-top: 2rem; border-top: 1px solid var(--line); }
+  .personal summary { display: flex; align-items: center; gap: .6rem; min-height: 3rem; padding: .75rem 0; color: var(--muted); font: 600 .95rem var(--body); cursor: pointer; list-style: none; }
+  .personal summary::-webkit-details-marker { display: none; }
+  .personal summary::before { content: '+'; display: inline-grid; place-items: center; width: 1.4rem; height: 1.4rem; border: 1px solid var(--line-strong); border-radius: 50%; font-size: .9rem; line-height: 1; }
+  .personal[open] summary::before { content: '−'; }
+  .personal summary:hover, .personal summary:focus-visible { color: var(--text); }
+  .personal-body { max-width: 650px; padding: .5rem 0 1.5rem 2rem; }
+  .personal-body p:not(.meta) { margin: .75rem 0; color: var(--muted); font-size: 1rem; line-height: 1.8; }
+  .personal-body .arrow-link { margin-top: .5rem; min-height: 2.5rem; }
+  @media(max-width: 650px) { .grid { grid-template-columns: 1fr; gap: 2rem; } .personal-body { padding-left: 0; } }
 </style>

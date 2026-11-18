@@ -6,7 +6,7 @@ import { sortWritings } from '../../utils/writingDates';
 const writings = sortWritings(await getCollection('writings', ({ data }) => !data.draft));
 const tags = [...new Set(writings.flatMap(w => w.data.tags))].sort();
 ---
-<BaseLayout title="Writings — YARONG" description="시와 짧은 글을 모은 조용한 아카이브">
+<BaseLayout title="Writings — YARONG" description="시와 짧은 글을 모은 조용한 아카이브" noindex>
   <div class="page shell reveal">
     <p class="eyebrow">Poetry / Prose / Fragments</p><h1 class="page-title">Writings</h1>
     <div class="tools" aria-label="글 목록 도구">

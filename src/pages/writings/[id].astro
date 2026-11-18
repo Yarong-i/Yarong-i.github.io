@@ -14,7 +14,7 @@ const publishedDate = writing.data.publishedAt ? formatWritingDate(writing.data.
 const excerpt = getWritingExcerpt(writing);
 const isPoetry = writing.data.category.toLowerCase() === 'poetry';
 ---
-<BaseLayout title={`${writing.data.title} — YARONG`} description={excerpt}>
+<BaseLayout title={`${writing.data.title} — YARONG`} description={excerpt} noindex>
   <article class="page shell reveal">
     <a class="eyebrow" href="/writings">← Writings</a>
     <header class:list={{ 'poem-header': isPoetry }}><p class="meta">{[writing.data.category, writtenDate].filter(Boolean).join(' · ')}</p>{writing.data.unfinished && <p class="completion">미완성</p>}{(publishedDate || writing.data.updatedAt) && <p class="published-meta meta">{publishedDate && `Published ${publishedDate}`}{publishedDate && writing.data.updatedAt && ' · '}{writing.data.updatedAt && `Updated ${formatWritingDate(writing.data.updatedAt, 'long')}`}</p>}<h1>{writing.data.title}</h1><p class="excerpt">{excerpt}</p><ul class="tag-list">{writing.data.tags.map((tag: string) => <li class="tag">{tag}</li>)}</ul></header>
