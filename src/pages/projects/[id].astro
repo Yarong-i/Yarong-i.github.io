@@ -119,11 +119,27 @@ const hasRecord = data.progress.length > 0 || data.result || data.reason || data
       {data.media && (
         <figure class="intro-media">
           <img class="intro-poster" src={data.media.poster} alt={data.media.alt} width="1400" height="788" loading="eager" />
-          {data.media.gallery.length > 0 && (
-            <ul class="intro-gallery">{data.media.gallery.map((g) => <li><img src={g.src} alt={g.alt} loading="lazy" /></li>)}</ul>
-          )}
           {data.media.note && <figcaption>{data.media.note}</figcaption>}
         </figure>
+      )}
+
+      {data.screens.length > 0 && (
+        <section class="intro-screens" aria-labelledby="screens-title">
+          <h2 id="screens-title">실제 화면</h2>
+          <ul class:list={['screen-list', { narrow: data.screens.every((x) => x.width < 900) }]}>
+            {data.screens.map((x) => (
+              <li>
+                <figure>
+                  <a href={x.src} data-lightbox data-caption={x.caption} data-alt={x.alt} aria-label={`${x.caption} — 크게 보기`}>
+                    <img src={x.src} alt={x.alt} width={x.width} height={x.height} loading="lazy" decoding="async" />
+                    <span class="zoom-hint" aria-hidden="true">크게 보기</span>
+                  </a>
+                  <figcaption>{x.caption}</figcaption>
+                </figure>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       {hasBody && <div class="intro-body"><Content /></div>}
@@ -251,8 +267,17 @@ const hasRecord = data.progress.length > 0 || data.result || data.reason || data
   .intro-actions .btn { min-height: 3.1rem; }
   .intro-media { margin: clamp(2rem, 5vw, 3rem) 0 0; }
   .intro-poster { width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 18px; }
-  .intro-gallery { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .6rem; margin: .6rem 0 0; padding: 0; list-style: none; }
-  .intro-gallery img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 10px; }
+  .intro-screens { margin-top: clamp(2rem, 5vw, 3rem); }
+  .intro-screens h2 { margin: 0 0 .9rem; font: 800 clamp(1.15rem, 1.8vw, 1.35rem) var(--display); letter-spacing: -.02em; }
+  .screen-list { display: grid; gap: 1.25rem; margin: 0; padding: 0; list-style: none; }
+  .screen-list.narrow { grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr)); align-items: start; }
+  .screen-list figure { margin: 0; }
+  .screen-list a { position: relative; display: block; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: #000; transition: border-color var(--fast); }
+  .screen-list a:hover, .screen-list a:focus-visible { border-color: var(--muted); }
+  .screen-list img { display: block; width: 100%; height: auto; }
+  .zoom-hint { position: absolute; right: .5rem; bottom: .5rem; padding: .25rem .6rem; border-radius: 999px; background: rgba(9, 10, 13, .78); color: var(--text); font: 600 .75rem var(--body); opacity: .85; }
+  .screen-list a:hover .zoom-hint, .screen-list a:focus-visible .zoom-hint { opacity: 1; }
+  .screen-list figcaption { margin-top: .5rem; font: 600 .9rem/1.4 var(--body); }
   .intro-media figcaption { margin-top: .6rem; color: var(--faint); font-size: .82rem; }
   .intro-body { max-width: 44rem; margin-top: clamp(2rem, 5vw, 3rem); }
   .intro-body :global(p) { margin: 0 0 1rem; font-size: clamp(1.05rem, 1.5vw, 1.2rem); line-height: 1.85; }

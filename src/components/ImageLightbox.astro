@@ -1,0 +1,56 @@
+---
+// One image viewer for the whole site. Any link with [data-lightbox] (href = the image file) opens it here;
+// without JavaScript the link simply opens the image. Uses <dialog>: Escape closes it, focus stays inside while
+// open and returns to the link afterwards. A tap on the backdrop or the close button closes it on touch screens.
+---
+<dialog class="lightbox" data-lightbox-dialog aria-label="이미지 크게 보기">
+  <div class="lb-bar">
+    <p class="lb-caption" data-lb-caption></p>
+    <a class="lb-original" data-lb-original href="#" target="_blank" rel="noopener">원본 크기로 보기 ↗</a>
+    <button class="lb-close" type="button" data-lb-close aria-label="닫기">✕</button>
+  </div>
+  <div class="lb-stage" data-lb-stage>
+    <img data-lb-img alt="" />
+  </div>
+</dialog>
+<script>
+  const dialog = document.querySelector<HTMLDialogElement>('[data-lightbox-dialog]');
+  if (dialog && typeof dialog.showModal === 'function') {
+    const img = dialog.querySelector<HTMLImageElement>('[data-lb-img]')!;
+    const caption = dialog.querySelector<HTMLElement>('[data-lb-caption]')!;
+    const original = dialog.querySelector<HTMLAnchorElement>('[data-lb-original]')!;
+    let opener: HTMLElement | null = null;
+    document.addEventListener('click', (event) => {
+      const link = (event.target as Element | null)?.closest<HTMLAnchorElement>('a[data-lightbox]');
+      if (!link || event.metaKey || event.ctrlKey || event.shiftKey) return;
+      event.preventDefault();
+      opener = link;
+      img.src = link.href;
+      img.alt = link.dataset.alt ?? link.querySelector('img')?.alt ?? '';
+      caption.textContent = link.dataset.caption ?? img.alt;
+      original.href = link.href;
+      dialog.showModal();
+      dialog.querySelector<HTMLButtonElement>('[data-lb-close]')!.focus();
+    });
+    dialog.querySelector('[data-lb-close]')!.addEventListener('click', () => dialog.close());
+    // A click on the backdrop (outside the image and the bar) closes; a click on the image does not.
+    dialog.addEventListener('click', (event) => {
+      if (event.target === dialog || (event.target as Element).matches('[data-lb-stage]')) dialog.close();
+    });
+    dialog.addEventListener('close', () => { img.removeAttribute('src'); opener?.focus(); opener = null; });
+  }
+</script>
+<style>
+  .lightbox { width: 100vw; max-width: 100vw; height: 100dvh; max-height: 100dvh; margin: 0; padding: 0; border: 0; background: rgba(5, 6, 8, .97); color: var(--text); }
+  .lightbox::backdrop { background: rgba(5, 6, 8, .92); }
+  .lightbox[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); }
+  .lb-bar { display: flex; align-items: center; gap: .75rem; padding: .6rem max(.75rem, env(safe-area-inset-right)) .6rem max(1rem, env(safe-area-inset-left)); }
+  .lb-caption { flex: 1; min-width: 0; margin: 0; font: 600 .92rem/1.4 var(--body); }
+  .lb-original { flex: 0 0 auto; display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0 .5rem; color: var(--muted); font-size: .82rem; }
+  .lb-original:hover, .lb-original:focus-visible { color: var(--text); }
+  .lb-close { flex: 0 0 auto; display: grid; place-items: center; width: 2.75rem; height: 2.75rem; border: 1px solid var(--line-strong); border-radius: 999px; background: rgba(255, 255, 255, .06); color: var(--text); font-size: 1.1rem; cursor: pointer; }
+  .lb-close:hover { background: rgba(255, 255, 255, .14); }
+  .lb-stage { display: grid; place-items: center; min-height: 0; padding: 0 .75rem .75rem; overflow: auto; touch-action: pinch-zoom; }
+  .lb-stage img { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; border-radius: 6px; }
+  @media (max-width: 560px) { .lb-original { display: none; } }
+</style>

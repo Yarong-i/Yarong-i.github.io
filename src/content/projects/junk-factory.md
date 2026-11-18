@@ -27,14 +27,23 @@ statusText: "Roblox에서 「[♻️] 폐품 공장」으로 플레이할 수 �
 media:
   poster: /media/junk-factory/key-art.webp
   alt: "폐품을 안고 달리는 캐릭터와 컨베이어 벨트 위 폐품을 동전으로 바꾸는 재활용 기계"
-  note: "대표 그림과 개발 중 Studio 화면(2026년 11월 12일 기록)입니다. 현재 공개 버전과 다를 수 있습니다."
-  gallery:
-    - src: /media/junk-factory/factory-overview.webp
-      alt: "개발 중 Studio 화면: 위에서 본 공장 부지와 폐품장"
-    - src: /media/junk-factory/pets-lineup.webp
-      alt: "개발 중 Studio 화면: 공장 앞 잔디밭에 줄지어 선 폐품 펫들"
-    - src: /media/junk-factory/factory-line.webp
-      alt: "개발 중 Studio 화면: 벨트를 따라 놓인 공장 설비"
+  note: "대표 일러스트"
+screens:
+  - src: /media/junk-factory/factory-line-live.webp
+    width: 1486
+    height: 760
+    caption: "공장 생산 라인"
+    alt: "투입구에서 판매기까지 벨트를 따라 세척 분사기, 자석 분리기, 압축기, 분쇄기, 분류기, 용광로가 놓인 공장 생산 라인과 캐릭터"
+  - src: /media/junk-factory/facilities.webp
+    width: 1082
+    height: 408
+    caption: "강화 상점 · 부화장 · 환생 시설"
+    alt: "누적 환생과 강화 상점 간판, 알 세 개가 놓인 부화장, 이달의 수익과 환생 시설 간판"
+  - src: /media/junk-factory/pets-studio.webp
+    width: 1857
+    height: 944
+    caption: "Studio 테스트 화면 · 펫 전시"
+    alt: "Studio 테스트 화면. 잔디밭 길에 이름표를 단 펫들이 전시되어 있고, 왼쪽 위 정보 창에 'Studio 모의 저장소 (실제 저장 아님)'가 표시된다"
 ---
 
 폐품을 수집하고 공장에서 가공·판매하며 작은 작업장을 키워 보세요. 설비를 확장하고 운반과 생산을 자동화하면 반복 작업을 줄이며 공장을 성장시킬 수 있습니다. 알에서 얻은 펫을 수집하거나 재료를 모아 차량을 복원하는 목표도 기다립니다. 공장을 완성한 뒤에는 환생으로 성장 보너스를 얻고 다시 도전할 수 있습니다.

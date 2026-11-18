@@ -1,14 +1,14 @@
 ---
 // A featured project on Home, in one of two forms:
-// - with `media` (a game): the real image large, a screenshot strip that swaps into the main view, then a short
+// - with `media` (a game): the key art large, a strip of real screens that open in the image viewer, then a short
 //   caption and the play action directly on the page, without a surrounding card;
-// - without media (the bot): its main features as large words, and a reserved frame for a real usage screen.
-//   The frame stays empty with a label until a real screenshot exists; it never shows a mock-up.
+// - without media (the bot): its main features as large words and its first real screen (opens in the viewer).
+//   Without a screen the frame stays empty with a label; it never shows a mock-up.
 import type { CollectionEntry } from 'astro:content';
 import { projectSummary, stageLabel } from '../../utils/projects';
 interface Props { project: CollectionEntry<'projects'>; }
 const { project } = Astro.props;
-const { title, alias, media, playUrl, playLabel, description, stage, technologies, highlights } = project.data;
+const { title, alias, media, playUrl, playLabel, description, stage, technologies, highlights, screens } = project.data;
 const href = `/projects/${project.id}/`;
 const stageText = stageLabel(project);
 // Highlights from the record; older records fall back to their one-line description's feature list.
@@ -24,11 +24,11 @@ const features = highlights.length > 0 ? highlights : !media && description?.inc
       ) : (
         <img class="main" src={media.poster} alt={media.alt} width="1400" height="788" loading="eager" decoding="async" data-feature-main />
       )}
-      {media.gallery.length > 0 && (
-        <ul class="thumbs" aria-label={`${title} 화면 고르기`}>
-          <li><button type="button" aria-pressed="true" data-src={media.poster} data-alt={media.alt}><img src={media.poster} alt="" loading="lazy" /><span class="sr-only">대표 이미지</span></button></li>
-          {media.gallery.map((g, i) => (
-            <li><button type="button" aria-pressed="false" data-src={g.src} data-alt={g.alt}><img src={g.src} alt="" loading="lazy" /><span class="sr-only">화면 {i + 1}: {g.alt}</span></button></li>
+      {media.note && <span class="art-label">{media.note}</span>}
+      {screens.length > 0 && (
+        <ul class="thumbs" aria-label={`${title} 실제 화면`}>
+          {screens.map((x) => (
+            <li><a href={x.src} data-lightbox data-caption={x.caption} data-alt={x.alt} title={x.caption}><img src={x.src} alt="" loading="lazy" /><span class="sr-only">{x.caption} 크게 보기</span></a></li>
           ))}
         </ul>
       )}
@@ -38,7 +38,6 @@ const features = highlights.length > 0 ? highlights : !media && description?.inc
         <p class="meta">{stageText && <span class="stage" data-stage={stage}>{stageText}</span>}{technologies.length > 0 && <span>{technologies.join(' · ')}</span>}</p>
         <h3><a href={href}>{title}</a>{alias && <small>{alias}</small>}</h3>
         <p class="summary">{projectSummary(project)}</p>
-        {media.note && <p class="media-note">{media.note}</p>}
       </div>
       <div class="actions">
         {playUrl
@@ -62,29 +61,25 @@ const features = highlights.length > 0 ? highlights : !media && description?.inc
         )}
         <a class="go" href={href}>프로젝트 소개 <span aria-hidden="true">→</span></a>
       </div>
-      <figure class="shot-slot">
-        <figcaption>실제 사용 화면 준비 중</figcaption>
-      </figure>
+      {screens[0] ? (
+        <figure class="shot">
+          <a href={screens[0].src} data-lightbox data-caption={screens[0].caption} data-alt={screens[0].alt}>
+            <img src={screens[0].src} alt={screens[0].alt} width={screens[0].width} height={screens[0].height} loading="lazy" decoding="async" />
+            <span class="sr-only">크게 보기</span>
+          </a>
+          <figcaption>{screens[0].caption}</figcaption>
+        </figure>
+      ) : (
+        <figure class="shot-slot">
+          <figcaption>실제 사용 화면 준비 중</figcaption>
+        </figure>
+      )}
     </div>
   </article>
 )}
 <script>
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
   document.querySelectorAll<HTMLElement>('[data-feature]').forEach((card) => {
-    // Screenshot strip: hovering (mouse) or tapping a thumbnail shows it in the main view.
-    const main = card.querySelector<HTMLImageElement>('[data-feature-main]');
-    const buttons = card.querySelectorAll<HTMLButtonElement>('.thumbs button');
-    const show = (button: HTMLButtonElement) => {
-      if (!main || button.getAttribute('aria-pressed') === 'true') return;
-      buttons.forEach((b) => b.setAttribute('aria-pressed', String(b === button)));
-      main.classList.add('swap');
-      window.setTimeout(() => { main.src = button.dataset.src!; main.alt = button.dataset.alt!; main.classList.remove('swap'); }, reduced.matches ? 0 : 140);
-    };
-    buttons.forEach((b) => {
-      b.addEventListener('click', () => show(b));
-      b.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') show(b); });
-    });
-
     // Short clip: plays while hovered (mouse) or while on screen (touch). Never plays under reduced motion.
     const video = card.querySelector<HTMLVideoElement>('[data-feature-video]');
     if (!video || reduced.matches) return;
@@ -115,9 +110,14 @@ const features = highlights.length > 0 ? highlights : !media && description?.inc
   .main.swap { opacity: 0; }
   @media (prefers-reduced-motion: no-preference) { .game:has(.visual:hover) .main { transform: scale(1.03); } }
   .thumbs { position: absolute; left: .75rem; bottom: .75rem; z-index: 1; display: flex; gap: .4rem; margin: 0; padding: .35rem; list-style: none; border-radius: 14px; background: rgba(9, 10, 13, .62); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
-  .thumbs button { display: block; width: 3.4rem; height: 2.6rem; padding: 0; overflow: hidden; border: 2px solid transparent; border-radius: 9px; background: #000; cursor: pointer; opacity: .72; transition: opacity var(--fast), border-color var(--fast), transform var(--fast) var(--ease); }
-  .thumbs button:hover, .thumbs button:focus-visible { opacity: 1; transform: translateY(-2px); }
-  .thumbs button[aria-pressed='true'] { border-color: #fff; opacity: 1; }
+  .thumbs a { display: block; width: 3.4rem; height: 2.6rem; padding: 0; overflow: hidden; border: 2px solid transparent; border-radius: 9px; background: #000; cursor: pointer; opacity: .72; transition: opacity var(--fast), border-color var(--fast), transform var(--fast) var(--ease); }
+  .thumbs a:hover, .thumbs a:focus-visible { opacity: 1; transform: translateY(-2px); }
+  .art-label { position: absolute; top: .75rem; left: .75rem; z-index: 1; padding: .2rem .6rem; border-radius: 999px; background: rgba(9, 10, 13, .62); color: #fff; font: 600 .72rem var(--body); }
+  .shot { position: relative; z-index: 1; margin: 0; display: grid; gap: .35rem; }
+  .shot a { display: block; overflow: hidden; border: 1px solid var(--line-strong); border-radius: 10px; background: #000; transition: border-color var(--fast); }
+  .shot a:hover, .shot a:focus-visible { border-color: var(--muted); }
+  .shot img { display: block; width: 100%; height: auto; }
+  .shot figcaption { color: var(--muted); font: 600 .78rem var(--body); }
   .thumbs img { width: 100%; height: 100%; object-fit: cover; }
   .caption { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: .9rem 2rem; }
   .text { display: grid; gap: .35rem; flex: 1 1 20rem; min-width: 0; }
@@ -127,7 +127,6 @@ const features = highlights.length > 0 ? highlights : !media && description?.inc
   .actions .btn { min-height: 3rem; }
   .tri { width: 0; height: 0; border-block: .38em solid transparent; border-left: .62em solid currentColor; }
   .play { gap: .55rem; }
-  .media-note { margin: .2rem 0 0; color: var(--faint); font-size: .76rem; line-height: 1.5; }
   .play-soon { display: inline-flex; align-items: center; gap: .55rem; min-height: 3rem; padding: 0 1.2rem; border: 1px dashed var(--line-strong); border-radius: 999px; color: var(--muted); font: 600 .9rem var(--body); cursor: default; }
 
   /* Bot: features as large words + a reserved frame for a real screenshot. A faint panel sets it apart. */
@@ -151,6 +150,6 @@ const features = highlights.length > 0 ? highlights : !media && description?.inc
     .text { flex: none; }
     .actions > * { flex: 1 1 0; justify-content: center; }
     .thumbs { left: .5rem; bottom: .5rem; }
-    .thumbs button { width: 2.9rem; height: 2.75rem; }
+    .thumbs a { width: 2.9rem; height: 2.75rem; }
   }
 </style>

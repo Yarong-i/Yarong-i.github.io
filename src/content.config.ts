@@ -36,6 +36,9 @@ const projects = defineCollection({
       gallery: z.array(z.object({ src: z.string(), alt: z.string() })).default([]),
     }).optional(),
     // Public link to play or use the project (game page, bot invite). Omit until one exists.
+    // Screenshots shown at their own aspect ratio, each opening in the image viewer. Captions describe what is
+    // visible; they never guess where or when a screen was taken.
+    screens: z.array(z.object({ src: z.string(), alt: z.string(), caption: z.string(), width: z.number().int(), height: z.number().int() })).default([]),
     playUrl: z.url().optional(),
     playLabel: z.string().optional(),
     // Introduction page (shown when `tagline` is set): one-line pitch, short highlights for Home,
