@@ -1,5 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import EmailContact from '../components/EmailContact.astro';
+import { CONTACT } from '../data/site';
 ---
 <BaseLayout title="About — YARONG" description="게임과 Discord 봇을 만들고 주식을 연구하는 Yarong에 대하여">
   <div class="page shell reveal"><p class="eyebrow">Profile / Seoul, KR</p><h1 class="page-title">About</h1>
@@ -12,7 +14,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         <li><a class="arrow-link" href="/portfolio">포트폴리오</a></li>
       </ul>
     </div></div>
-    <div class="grid"><h2>Contact</h2><div><a class="arrow-link" href="https://github.com/Yarong-i" rel="me">GitHub / Yarong-i</a></div></div>
+    <div class="grid"><h2>Contact</h2><div>
+      <EmailContact />
+      <p class="secondary"><a class="arrow-link" href={CONTACT.github} rel="me">GitHub — {CONTACT.githubLabel}</a></p>
+    </div></div>
 
     <details class="personal">
       <summary>개인 기록</summary>
@@ -30,6 +35,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   .grid { display: grid; grid-template-columns: 1fr 2fr; gap: 4rem; padding: 4rem 0; border-top: 1px solid var(--line); } .grid h2 { margin: 0; font: 500 1.1rem var(--sans); } .grid p { max-width: 650px; margin: 0 0 2rem; color: var(--muted); font-size: 1.05rem; }
   .links { display: flex; flex-wrap: wrap; gap: .5rem 2rem; margin: 0; padding: 0; list-style: none; }
   .links a { min-height: 2.5rem; }
+  .secondary { margin: 1.5rem 0 0 !important; }
   /* Personal record: closed by default; the archive link is only inside. Native details/summary works with
      keyboard (Enter/Space) and touch without any script. */
   .personal { margin-top: 2rem; border-top: 1px solid var(--line); }

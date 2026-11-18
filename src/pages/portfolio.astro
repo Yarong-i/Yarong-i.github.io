@@ -3,6 +3,7 @@
 // technologies each one actually lists. Nothing here is written separately from those records.
 import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { CONTACT, mailto } from '../data/site';
 import { projectSummary, sortProjects, stageLabel } from '../utils/projects';
 const projects = sortProjects(await getCollection('projects'));
 const withPortfolio = new Set((await getCollection('portfolios')).map((p) => p.id));
@@ -36,7 +37,11 @@ const tech = [...new Set(shown.flatMap((p) => p.data.technologies))];
         </li>
       ))}
     </ol>
-    <div class="cta"><a class="btn btn-primary" href="/contact">문의하기 <span class="arrow" aria-hidden="true">→</span></a><a class="btn btn-ghost" href="https://github.com/Yarong-i" rel="me">GitHub</a></div>
+    <div class="cta">
+      <a class="btn btn-primary" href="/contact">문의하기 <span class="arrow" aria-hidden="true">→</span></a>
+      <a class="btn btn-ghost" href={mailto()}>이메일 보내기</a>
+      <a class="btn btn-ghost" href={CONTACT.github} rel="me">GitHub · {CONTACT.githubLabel}</a>
+    </div>
   </div>
 </BaseLayout>
 <style>

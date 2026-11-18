@@ -1,0 +1,58 @@
+---
+// Email contact: the address in plain text, a mailto button and a copy button that reports success or failure.
+// Values come from src/data/site.ts.
+import { CONTACT, mailto } from '../data/site';
+interface Props { compact?: boolean; }
+const { compact = false } = Astro.props;
+---
+<div class:list={['email-contact', { compact }]} data-email-contact>
+  {!compact && <p class="message">{CONTACT.message}</p>}
+  <p class="address"><a href={mailto()} data-email>{CONTACT.email}</a></p>
+  <div class="actions">
+    <a class="btn btn-primary" href={mailto()}>이메일 보내기 <span class="arrow" aria-hidden="true">→</span></a>
+    <button class="btn btn-ghost copy" type="button" data-copy={CONTACT.email}>주소 복사</button>
+    <span class="status" role="status" aria-live="polite" data-copy-status></span>
+  </div>
+</div>
+<script>
+  async function copyText(text: string): Promise<boolean> {
+    try {
+      if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(text); return true; }
+    } catch { /* fall back below */ }
+    // Fallback for browsers without the async clipboard API (or when it is refused).
+    const area = document.createElement('textarea');
+    area.value = text; area.setAttribute('readonly', ''); area.style.position = 'fixed'; area.style.opacity = '0';
+    document.body.appendChild(area); area.select();
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch { ok = false; }
+    area.remove();
+    return ok;
+  }
+  document.querySelectorAll<HTMLElement>('[data-email-contact]').forEach((box) => {
+    const button = box.querySelector<HTMLButtonElement>('[data-copy]')!;
+    const status = box.querySelector<HTMLElement>('[data-copy-status]')!;
+    let timer = 0;
+    button.addEventListener('click', async () => {
+      const ok = await copyText(button.dataset.copy!);
+      status.textContent = ok ? '주소를 복사했어요.' : '복사하지 못했어요. 주소를 직접 선택해 복사해 주세요.';
+      status.dataset.state = ok ? 'ok' : 'fail';
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => { status.textContent = ''; delete status.dataset.state; }, 4000);
+    });
+  });
+</script>
+<style>
+  .email-contact { display: grid; gap: .9rem; }
+  .message { margin: 0; color: var(--muted); font-size: 1.05rem; line-height: 1.7; }
+  .address { margin: 0; }
+  .address a { font: 800 clamp(1.4rem, 4vw, 2.2rem)/1.2 var(--display); letter-spacing: -.02em; overflow-wrap: anywhere; user-select: all; }
+  .address a:hover, .address a:focus-visible { text-decoration: underline; text-underline-offset: 4px; }
+  .compact .address a { font-size: 1.1rem; }
+  .actions { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; }
+  .actions .btn { min-height: 3rem; }
+  .copy { cursor: pointer; background: transparent; }
+  .status { min-height: 1.4rem; font: 600 .88rem var(--body); }
+  .status[data-state='ok'] { color: #7BE3AF; }
+  .status[data-state='fail'] { color: #FF7A6E; }
+  @media (max-width: 480px) { .actions .btn { flex: 1 1 100%; } .status { flex-basis: 100%; } }
+</style>

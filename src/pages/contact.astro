@@ -1,18 +1,20 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import EmailContact from '../components/EmailContact.astro';
+import { CONTACT } from '../data/site';
 ---
-<BaseLayout title="문의 — YARONG" description="Yarong에게 연락하는 방법.">
+<BaseLayout title="문의 — YARONG" description={CONTACT.message}>
   <div class="page shell">
     <p class="eyebrow">Contact</p>
     <h1 class="page-title">문의</h1>
     <div class="grid">
-      <a class="card" href="https://github.com/Yarong-i" rel="me">
-        <span class="meta">GitHub</span>
-        <strong>Yarong-i</strong>
-        <span class="sub">프로젝트 관련 질문이나 제안은 GitHub로 연락해 주세요.</span>
-      </a>
+      <section class="card" aria-labelledby="email-h">
+        <h2 id="email-h" class="meta">이메일</h2>
+        <EmailContact />
+      </section>
       <div class="card quiet">
         <span class="meta">함께 보면 좋은 곳</span>
+        <a class="arrow-link" href={CONTACT.github} rel="me">GitHub — {CONTACT.githubLabel}</a>
         <a class="arrow-link" href="/portfolio">포트폴리오</a>
         <a class="arrow-link" href="/projects">프로젝트</a>
         <a class="arrow-link" href="/about">소개</a>
@@ -22,11 +24,9 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 </BaseLayout>
 <style>
   .grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 1rem; }
-  .card { display: grid; align-content: start; gap: .6rem; padding: clamp(1.4rem, 3vw, 2.2rem); border: 1px solid var(--line); border-radius: 22px; background: var(--surface); transition: border-color var(--base) var(--ease); }
-  a.card:hover, a.card:focus-visible { border-color: var(--muted); }
-  .card strong { font: 800 clamp(2rem, 4vw, 3rem)/1 var(--display); letter-spacing: -.04em; }
-  .sub { color: var(--muted); }
+  .card { display: grid; align-content: start; gap: .6rem; padding: clamp(1.4rem, 3vw, 2.2rem); border: 1px solid var(--line); border-radius: 22px; background: var(--surface); }
+  .card h2 { margin: 0; }
   .quiet { background: transparent; }
-  .quiet .arrow-link { justify-self: start; min-height: 2.25rem; }
+  .quiet .arrow-link { justify-self: start; min-height: 2.5rem; }
   @media (max-width: 700px) { .grid { grid-template-columns: 1fr; } }
 </style>
