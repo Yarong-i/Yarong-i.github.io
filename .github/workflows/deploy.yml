@@ -1,24 +1,28 @@
 name: Deploy to GitHub Pages
 
-# One workflow builds the site from main's code and the research-data branch's public records:
-#   1. check out main (code) and research-data (records + the latest export from the research server);
-#   2. merge the export into the records with scripts/import-research-export.mjs (idempotent; a published
-#      pre-market record is never replaced);
-#   3. astro check + build + dist guard (npm run build);
-#   4. only after a successful build: save merged records back to research-data, then deploy Pages.
+# Builds the site from main's code and the public research records in Yarong-i/yarong-research-data:
+#   1. check out main (code) and the data repository (records, already merged there by its own workflow);
+#   2. astro check + build + dist guard (npm run build);
+#   3. deploy Pages only after a successful build.
 # A failed run deploys nothing, so the current public site stays as it is; re-running the workflow retries.
-# Every deploy - code change or data change - uses the latest research-data, so records never go back.
+# Every deploy - code change, schedule or manual - uses the latest records, so they never go back.
+# This workflow writes to no repository.
 #
-# Triggers: a push to main, a manual run, the research-data branch's trigger workflow (workflow_dispatch;
-# commits made with GITHUB_TOKEN never start workflows by themselves), and a weekday backstop schedule.
+# The research server publishes at 08:55 / 09:15 / 15:55 / 16:08 KST and the data repository merges within a few
+# minutes; the schedule below picks that up. (GitHub may start scheduled runs some minutes late.)
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
   schedule:
-    - cron: '30 0 * * 1-5'   # 09:30 KST, after the pre-market publish runs
-    - cron: '20 7 * * 1-5'   # 16:20 KST, after the post-market publish runs
+    - cron: '10 0 * * 1-5'    # 09:10 KST
+    - cron: '30 0 * * 1-5'    # 09:30 KST
+    - cron: '15 7 * * 1-5'    # 16:15 KST
+    - cron: '30 7 * * 1-5'    # 16:30 KST
+
+permissions:
+  contents: read
 
 concurrency:
   group: pages
@@ -27,50 +31,30 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write          # saves merged records to research-data (main is never written by this job)
     steps:
       - name: Check out main (code)
         uses: actions/checkout@v7
         with:
           ref: main
-      - name: Check out research-data (public records)
+      - name: Check out the research records
         uses: actions/checkout@v7
         with:
-          ref: research-data
+          repository: Yarong-i/yarong-research-data
+          ref: main
           path: _data
       - uses: actions/setup-node@v5
         with:
           node-version: '22'
           cache: npm
       - run: npm ci --no-audit --no-fund
-      - name: Merge the latest export into the records
+      - name: Use the published records
         run: |
           mkdir -p src/content/research src/content/performance
           cp _data/src/content/research/*.json src/content/research/ 2>/dev/null || true
           cp _data/src/content/performance/*.json src/content/performance/ 2>/dev/null || true
-          if [ -f _data/research-export.json ]; then
-            node scripts/import-research-export.mjs _data/research-export.json
-          else
-            echo "No export on research-data yet; building from the stored records."
-          fi
+          echo "records: $(ls src/content/research/*.json 2>/dev/null | wc -l) days, data commit $(git -C _data rev-parse --short HEAD)"
       - name: Check and build
         run: npm run build
-      - name: Save merged records to research-data
-        run: |
-          mkdir -p _data/src/content/research _data/src/content/performance
-          cp src/content/research/*.json _data/src/content/research/ 2>/dev/null || true
-          cp src/content/performance/*.json _data/src/content/performance/ 2>/dev/null || true
-          cd _data
-          git add src/content
-          if git diff --cached --quiet; then echo "Records unchanged."; exit 0; fi
-          git -c user.name="yarong-research-bot" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
-            commit -m "research: merge export into records"
-          for attempt in 1 2 3; do
-            git push origin HEAD:research-data && exit 0
-            git pull --rebase origin research-data
-          done
-          echo "Could not save merged records after 3 attempts"; exit 1
       - uses: actions/upload-pages-artifact@v4
         with:
           path: dist

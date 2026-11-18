@@ -14,7 +14,7 @@ screenshots/
 *.jpeg
 dist-fixtures/
 dist-fixtures/
-# Research records are published on the research-data branch, not on main (docs/adding-research.md).
+# Research records are published in Yarong-i/yarong-research-data, not here (docs/adding-research.md).
 src/content/research/*.json
 src/content/performance/*.json
 # Server-side publish files hold internal paths; they live on the server, not in this public repository.

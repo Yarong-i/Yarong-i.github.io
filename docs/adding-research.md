@@ -3,9 +3,9 @@
 ## Where the data comes from
 
 `src/content/research/YYYY-MM-DD.json` — one file per trading day (the day the recommendation is for) — and
-`src/content/performance/*.json` are published on the **research-data** branch, not on main (they are ignored on
-main). The research server's export is merged there by the deploy workflow (`docs/research-auto-publish.md`,
-`scripts/import-research-export.mjs`). Locally, `npm run research:pull` copies the published records.
+`src/content/performance/*.json` are published in the public data repository **Yarong-i/yarong-research-data**
+(ignored in this repository). The research server's export is merged there by that repository's workflow with
+`scripts/import-research-export.mjs` (`docs/research-auto-publish.md`). Locally, `npm run research:pull` copies them.
 
 Older records were first imported from the YATC ASK office store on a PC:
 
