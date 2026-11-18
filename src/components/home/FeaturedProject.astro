@@ -8,11 +8,11 @@ import type { CollectionEntry } from 'astro:content';
 import { projectSummary, stageLabel } from '../../utils/projects';
 interface Props { project: CollectionEntry<'projects'>; }
 const { project } = Astro.props;
-const { title, alias, media, playUrl, playLabel, description, stage, technologies } = project.data;
+const { title, alias, media, playUrl, playLabel, description, stage, technologies, highlights } = project.data;
 const href = `/projects/${project.id}/`;
 const stageText = stageLabel(project);
-// Features come from the existing one-line description ("출석, 경제, 주식 게임, 예측, 상점 기능을 가진 …").
-const features = !media && description?.includes(',')
+// Highlights from the record; older records fall back to their one-line description's feature list.
+const features = highlights.length > 0 ? highlights : !media && description?.includes(',')
   ? description.replace(/\s*기능을.*$/, '').split(',').map((s) => s.trim()).filter(Boolean)
   : [];
 ---
@@ -38,12 +38,13 @@ const features = !media && description?.includes(',')
         <p class="meta">{stageText && <span class="stage" data-stage={stage}>{stageText}</span>}{technologies.length > 0 && <span>{technologies.join(' · ')}</span>}</p>
         <h3><a href={href}>{title}</a>{alias && <small>{alias}</small>}</h3>
         <p class="summary">{projectSummary(project)}</p>
+        {media.note && <p class="media-note">{media.note}</p>}
       </div>
       <div class="actions">
         {playUrl
           ? <a class="btn btn-primary play" href={playUrl} rel="noopener" target="_blank"><span class="tri" aria-hidden="true"></span>{playLabel ?? '플레이'}</a>
           : <span class="play-soon" title="공개 링크가 생기면 바로 플레이할 수 있습니다"><span class="tri" aria-hidden="true"></span>공개 준비 중</span>}
-        <a class="btn btn-ghost" href={href}>개발 기록 <span class="arrow" aria-hidden="true">→</span></a>
+        <a class="btn btn-ghost" href={href}>프로젝트 소개 <span class="arrow" aria-hidden="true">→</span></a>
       </div>
     </div>
   </article>
@@ -59,7 +60,7 @@ const features = !media && description?.includes(',')
         {features.length > 0 && (
           <ul class="features" aria-label="대표 기능">{features.map((f, i) => <li style={`--i: ${i}`}>{f}</li>)}</ul>
         )}
-        <a class="go" href={href}>기능과 기록 보기 <span aria-hidden="true">→</span></a>
+        <a class="go" href={href}>프로젝트 소개 <span aria-hidden="true">→</span></a>
       </div>
       <figure class="shot-slot">
         <figcaption>실제 사용 화면 준비 중</figcaption>
@@ -103,7 +104,7 @@ const features = !media && description?.includes(',')
   .meta { display: flex; flex-wrap: wrap; gap: .3rem .9rem; margin: 0; text-transform: none; letter-spacing: .02em; }
   .stage { color: var(--text); }
   .stage::before { content: ''; display: inline-block; width: .45rem; height: .45rem; margin-right: .4rem; border-radius: 50%; background: var(--muted); vertical-align: .1em; }
-  .stage[data-stage='in-use']::before { background: #3FD18A; }
+  .stage[data-stage='in-use']::before, .stage[data-stage='live']::before, .stage[data-stage='operating']::before { background: #3FD18A; }
   .stage[data-stage='active']::before { background: var(--progress); }
   .summary { margin: 0; color: var(--muted); line-height: 1.55; }
 
@@ -126,6 +127,7 @@ const features = !media && description?.includes(',')
   .actions .btn { min-height: 3rem; }
   .tri { width: 0; height: 0; border-block: .38em solid transparent; border-left: .62em solid currentColor; }
   .play { gap: .55rem; }
+  .media-note { margin: .2rem 0 0; color: var(--faint); font-size: .76rem; line-height: 1.5; }
   .play-soon { display: inline-flex; align-items: center; gap: .55rem; min-height: 3rem; padding: 0 1.2rem; border: 1px dashed var(--line-strong); border-radius: 999px; color: var(--muted); font: 600 .9rem var(--body); cursor: default; }
 
   /* Bot: features as large words + a reserved frame for a real screenshot. A faint panel sets it apart. */

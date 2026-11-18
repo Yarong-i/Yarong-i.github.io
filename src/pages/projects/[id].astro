@@ -1,5 +1,5 @@
 ---
-import { getCollection, render } from 'astro:content';
+import { getCollection, getEntry, render } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import ResearchFlow from '../../components/ResearchFlow.astro';
 import { stageLabel, projectSummary, reasonLabel } from '../../utils/projects';
@@ -27,6 +27,7 @@ if (earlier?.name) earlierFacts.push(['Name', earlier.name]);
 if (earlier?.year !== undefined) earlierFacts.push(['Year', String(earlier.year)]);
 if (earlier?.private !== undefined) earlierFacts.push(['Source', earlier.private ? 'Private' : 'Public']);
 const hasBody = Boolean(project.body?.trim());
+const portfolio = await getEntry('portfolios', project.id);
 const hasRecord = data.progress.length > 0 || data.result || data.reason || data.versions.length > 0 || related.length > 0 || data.changelog;
 ---
 <BaseLayout title={`${data.title} — YARONG`} description={summary}>
@@ -98,6 +99,62 @@ const hasRecord = data.progress.length > 0 || data.result || data.reason || data
       </section>
 
       <footer class="closing shell"><p>{caseStudy.closing}</p></footer>
+    </article>
+  ) : data.tagline ? (
+    <article class="page shell intro-page">
+      <a class="eyebrow" href="/projects">← Projects</a>
+      <p class="intro-kicker">{data.category && `${data.category} · `}프로젝트 소개</p>
+      <h1 class="intro-title">{data.title}</h1>
+      {data.alias && <p class="intro-alias">{data.alias}</p>}
+      <p class="intro-tagline">{data.tagline}</p>
+      <div class="intro-meta">
+        {stage && <span class="stage" data-stage={data.stage}>{stage}</span>}
+        {data.year !== undefined && <span>{data.year}</span>}
+      </div>
+      <div class="intro-actions">
+        {data.playUrl && <a class="btn btn-primary" href={data.playUrl} target="_blank" rel="noopener">{data.playLabel ?? '바로 이용하기'} <span class="arrow" aria-hidden="true">↗</span></a>}
+        {portfolio && <a class="btn btn-ghost" href={`/projects/${project.id}/portfolio/`}>포트폴리오 <span class="arrow" aria-hidden="true">→</span></a>}
+      </div>
+
+      {data.media && (
+        <figure class="intro-media">
+          <img class="intro-poster" src={data.media.poster} alt={data.media.alt} width="1400" height="788" loading="eager" />
+          {data.media.gallery.length > 0 && (
+            <ul class="intro-gallery">{data.media.gallery.map((g) => <li><img src={g.src} alt={g.alt} loading="lazy" /></li>)}</ul>
+          )}
+          {data.media.note && <figcaption>{data.media.note}</figcaption>}
+        </figure>
+      )}
+
+      {hasBody && <div class="intro-body"><Content /></div>}
+
+      {data.features.length > 0 && (
+        <section class="intro-section" aria-labelledby="features-title">
+          <h2 id="features-title">대표 특징</h2>
+          <ul class="feature-list">{data.features.map((f) => <li><strong>{f.title}</strong><span>{f.text}</span></li>)}</ul>
+        </section>
+      )}
+
+      {(data.statusTitle || data.statusText || data.howTo || data.notice) && (
+        <section class="intro-section" aria-labelledby="status-title">
+          <h2 id="status-title">현재 상태</h2>
+          <dl class="status-block">
+            {data.statusTitle && <div><dt>상태</dt><dd><strong>{data.statusTitle}</strong>{data.statusText && <p>{data.statusText}</p>}</dd></div>}
+            {data.howTo && <div><dt>이용 방법</dt><dd>{data.howTo}</dd></div>}
+            {data.playUrl && <div><dt>플레이</dt><dd><a class="text-link" href={data.playUrl} target="_blank" rel="noopener">Roblox에서 열기 ↗</a></dd></div>}
+          </dl>
+          {data.notice && <p class="intro-notice">{data.notice}</p>}
+        </section>
+      )}
+
+      <section class="intro-section" aria-labelledby="more-title">
+        <h2 id="more-title">더 보기</h2>
+        {data.technologies.length > 0 && <ul class="tag-list">{data.technologies.map((t: string) => <li class="tag">{t}</li>)}</ul>}
+        <ul class="intro-links">
+          {portfolio && <li><a class="text-link" href={`/projects/${project.id}/portfolio/`}>포트폴리오 — {portfolio.data.title}</a></li>}
+          {related.map((item) => <li><a class="text-link" href={`/projects/${item.id}/`}>연결된 프로젝트 — {item.data.title}</a></li>)}
+        </ul>
+      </section>
     </article>
   ) : (
     <article class="page shell reveal">
@@ -181,6 +238,43 @@ const hasRecord = data.progress.length > 0 || data.result || data.reason || data
     .closing p { font-size: clamp(2.5rem, 12vw, 4rem); }
   }
   .stage-line { margin: 1.5rem 0 0; }
+
+  /* Introduction page (projects with a tagline). */
+  .intro-page { max-width: 64rem; }
+  .intro-kicker { margin: 1.5rem 0 .5rem; color: var(--faint); font: 600 .8rem var(--body); letter-spacing: .04em; }
+  .intro-title { margin: 0; font: 800 clamp(2.6rem, 6vw, 4.6rem)/1 var(--display); letter-spacing: -.05em; }
+  .intro-alias { margin: .5rem 0 0; color: var(--faint); font: 500 .95rem var(--body); }
+  .intro-tagline { max-width: 40rem; margin: 1.25rem 0 0; font: 600 clamp(1.25rem, 2.6vw, 1.75rem)/1.4 var(--display); letter-spacing: -.02em; }
+  .intro-meta { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; margin-top: 1.1rem; color: var(--muted); font-size: .9rem; }
+  .stage[data-stage='live']::before, .stage[data-stage='operating']::before { content: ''; display: inline-block; width: .5rem; height: .5rem; margin-right: .45rem; border-radius: 50%; background: #3FD18A; vertical-align: .08em; }
+  .intro-actions { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1.5rem; }
+  .intro-actions .btn { min-height: 3.1rem; }
+  .intro-media { margin: clamp(2rem, 5vw, 3rem) 0 0; }
+  .intro-poster { width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 18px; }
+  .intro-gallery { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .6rem; margin: .6rem 0 0; padding: 0; list-style: none; }
+  .intro-gallery img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 10px; }
+  .intro-media figcaption { margin-top: .6rem; color: var(--faint); font-size: .82rem; }
+  .intro-body { max-width: 44rem; margin-top: clamp(2rem, 5vw, 3rem); }
+  .intro-body :global(p) { margin: 0 0 1rem; font-size: clamp(1.05rem, 1.5vw, 1.2rem); line-height: 1.85; }
+  .intro-section { margin-top: clamp(2.5rem, 5vw, 3.5rem); padding-top: 1.25rem; border-top: 1px solid var(--line); }
+  .intro-section h2 { margin: 0 0 1rem; font: 800 clamp(1.25rem, 2vw, 1.55rem) var(--display); letter-spacing: -.02em; }
+  .feature-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 2rem; margin: 0; padding: 0; list-style: none; }
+  .feature-list li { display: grid; gap: .2rem; padding: .9rem 0; border-bottom: 1px solid var(--line); }
+  .feature-list strong { font: 700 1.05rem var(--display); }
+  .feature-list span { color: var(--muted); line-height: 1.6; }
+  .status-block { display: grid; gap: 0; margin: 0; }
+  .status-block > div { display: grid; grid-template-columns: 7rem minmax(0, 1fr); gap: 1rem; padding: .8rem 0; border-bottom: 1px solid var(--line); }
+  .status-block dt { color: var(--faint); font: 600 .85rem/1.7 var(--body); }
+  .status-block dd { margin: 0; line-height: 1.7; }
+  .status-block dd p { margin: .3rem 0 0; color: var(--muted); }
+  .intro-notice { margin: 1rem 0 0; padding: .7rem .9rem; border-left: 3px solid var(--line-strong); color: var(--muted); font-size: .92rem; }
+  .intro-links { display: grid; gap: .4rem; margin: 1rem 0 0; padding: 0; list-style: none; }
+  .intro-links a { display: inline-flex; min-height: 2.5rem; align-items: center; }
+  @media (max-width: 640px) {
+    .feature-list { grid-template-columns: 1fr; }
+    .status-block > div { grid-template-columns: 1fr; gap: .2rem; }
+    .intro-actions .btn { flex: 1 1 100%; }
+  }
   .stage { display: inline-block; padding: .35rem .8rem; border: 1px solid var(--line-strong); border-radius: 999px; font: 600 .82rem/1.1 var(--body); }
   .record { margin: clamp(3rem, 6vw, 5rem) 0 0; border-top: 1px solid var(--line); }
   .record > div { display: grid; grid-template-columns: minmax(8rem, 14rem) minmax(0, 1fr); gap: 2rem; padding: 1.4rem 0; border-bottom: 1px solid var(--line); }

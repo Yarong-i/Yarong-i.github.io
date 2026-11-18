@@ -16,7 +16,7 @@ const projects = defineCollection({
     year: z.number().optional(),
     technologies: z.array(z.string()).default([]),
     // Progress state; omit while undecided. Labels live in src/utils/projects.ts.
-    stage: z.enum(['in-use', 'active', 'inquiry', 'finished', 'paused', 'ended']).optional(),
+    stage: z.enum(['live', 'operating', 'in-use', 'active', 'inquiry', 'finished', 'paused', 'ended']).optional(),
     // Short qualifier shown with the stage, e.g. 미출시.
     stageNote: z.string().optional(),
     // Source visibility only, independent of the stage. Omit when unknown.
@@ -31,11 +31,22 @@ const projects = defineCollection({
       alt: z.string(),
       // Optional short muted loop (mp4/webm). Plays on hover or when in view; never under reduced motion.
       video: z.string().optional(),
+      // What the images are and how current they are, e.g. development screens from an earlier build.
+      note: z.string().optional(),
       gallery: z.array(z.object({ src: z.string(), alt: z.string() })).default([]),
     }).optional(),
     // Public link to play or use the project (game page, bot invite). Omit until one exists.
     playUrl: z.url().optional(),
     playLabel: z.string().optional(),
+    // Introduction page (shown when `tagline` is set): one-line pitch, short highlights for Home,
+    // feature list, current status, how to use it and a notice. The Markdown body is the introduction text.
+    tagline: z.string().optional(),
+    highlights: z.array(z.string()).default([]),
+    features: z.array(z.object({ title: z.string(), text: z.string() })).default([]),
+    statusTitle: z.string().optional(),
+    statusText: z.string().optional(),
+    howTo: z.string().optional(),
+    notice: z.string().optional(),
     // What has happened so far, in order.
     progress: z.array(z.string()).default([]),
     // Why the project is paused, ended or left unreleased, and the heading to show for it.
@@ -82,6 +93,21 @@ const env = (globalThis as { process?: { env: Record<string, string | undefined>
 const fixtures = env.RESEARCH_SOURCE === 'fixtures';
 const researchBase = fixtures ? './tests/fixtures/research' : './src/content/research';
 const performanceBase = fixtures ? './tests/fixtures/performance' : './src/content/performance';
+
+// Portfolio write-up of a project: src/content/portfolios/<project id>.md, shown at /projects/<id>/portfolio/.
+// Goal, role and current stage come first so a reader gets them at a glance; the body holds the cases.
+const portfolios = defineCollection({
+  loader: glob({ pattern: '**/*.{md,mdx}', base: './src/content/portfolios' }),
+  schema: z.object({
+    title: z.string(),
+    kind: z.string(),
+    recordedAt: z.coerce.date().optional(),
+    technologies: z.array(z.string()).default([]),
+    goal: z.string(),
+    role: z.string(),
+    current: z.string(),
+  }),
+});
 
 // One file per trading day: YYYY-MM-DD.json (written by `npm run research:import`, or by hand).
 // `date` is the trading day the recommendation is for. Each model keeps its own premarket and postmarket record.
@@ -228,4 +254,4 @@ const writings = defineCollection({
   }),
 });
 
-export const collections = { projects, writings, research, performance, news };
+export const collections = { projects, portfolios, writings, research, performance, news };

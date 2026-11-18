@@ -5,7 +5,8 @@ import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { projectSummary, sortProjects, stageLabel } from '../utils/projects';
 const projects = sortProjects(await getCollection('projects'));
-const shown = projects.filter((p) => p.data.stage && ['in-use', 'active', 'finished', 'paused'].includes(p.data.stage));
+const withPortfolio = new Set((await getCollection('portfolios')).map((p) => p.id));
+const shown = projects.filter((p) => p.data.stage && ['live', 'operating', 'in-use', 'active', 'finished', 'paused'].includes(p.data.stage));
 const tech = [...new Set(shown.flatMap((p) => p.data.technologies))];
 ---
 <BaseLayout title="포트폴리오 — YARONG" description="Yarong이 만든 게임, 봇, 도구, 연구 프로젝트 모음.">
@@ -22,13 +23,14 @@ const tech = [...new Set(shown.flatMap((p) => p.data.technologies))];
     <ol class="works">
       {shown.map((p, i) => (
         <li class:list={[{ big: i < 2 }]}>
-          <a href={`/projects/${p.id}/`}>
+          <a href={withPortfolio.has(p.id) ? `/projects/${p.id}/portfolio/` : `/projects/${p.id}/`}>
             {p.data.media && <img src={p.data.media.poster} alt="" loading="lazy" />}
             <span class="info">
               <span class="meta">{stageLabel(p)}{p.data.category && ` · ${p.data.category}`}{p.data.year && ` · ${p.data.year}`}</span>
               <strong>{p.data.title}</strong>
               <span class="sum">{projectSummary(p)}</span>
               {p.data.technologies.length > 0 && <span class="tech">{p.data.technologies.join(' · ')}</span>}
+              {withPortfolio.has(p.id) && <span class="pf-link">포트폴리오 읽기 →</span>}
             </span>
           </a>
         </li>
@@ -53,6 +55,7 @@ const tech = [...new Set(shown.flatMap((p) => p.data.technologies))];
   .big .info strong { font-size: clamp(1.6rem, 3vw, 2.2rem); }
   .sum { color: var(--muted); line-height: 1.55; }
   .tech { color: var(--faint); font-size: .85rem; }
+  .pf-link { margin-top: .3rem; font: 700 .9rem var(--body); }
   .cta { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 2.5rem; }
   @media (max-width: 900px) { .works { grid-template-columns: 1fr 1fr; } .works li.big, .works li.big:nth-child(2) { grid-column: span 2; } }
   @media (max-width: 600px) { .works { grid-template-columns: 1fr; } .works li.big, .works li.big:nth-child(2) { grid-column: auto; } .big a:has(img) { grid-template-columns: 1fr; } }

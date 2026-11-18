@@ -1,34 +1,40 @@
 ---
 title: 폐품 공장
-alias: Junk Tycoon (Roblox)
-summary: "폐품을 모아 공장 라인에서 가공하고 팔아 공장을 키우는 Roblox 타이쿤 게임입니다."
+alias: "[♻️] 폐품 공장 (Roblox)"
+summary: "폐품을 모아 가공·판매하고, 자동화와 수집으로 나만의 공장을 키우는 Roblox 게임입니다."
+tagline: "버려진 폐품을 모아 나만의 공장을 키우는 Roblox 성장 게임"
 category: Game Development
-stage: active
-stageNote: 미공개
+stage: live
 featured: 1
 year: 2026
-technologies: [Roblox, Luau]
-progress:
-  - "공장 라인 11단계, 환생 자동화, 펫과 부화장을 설계하고 Roblox Studio에서 테스트하고 있습니다."
-  - "게임 속 수치는 모두 초기 테스트값입니다."
+technologies: [Roblox Studio, Luau, Python, ChatGPT, Claude Code]
+playUrl: https://www.roblox.com/games/91146434932886
+playLabel: 플레이하기
+highlights: [공장 성장, 자동화, 펫 수집, 차량 복원, 환생]
+features:
+  - title: 공장 성장
+    text: 11개 생산 설비를 순서대로 확장
+  - title: 자동화
+    text: 원격 집하장과 자동 공급 설비로 운반·생산 개선
+  - title: 펫 수집
+    text: 10개 테마의 펫 50종과 도감·전시
+  - title: 차량 복원
+    text: 재료를 모아 차량을 완성하는 수집 목표
+  - title: 환생
+    text: 일부 진행을 초기화하고 보너스와 함께 다시 성장
+statusTitle: 공개 운영 중
+statusText: "Roblox에서 「[♻️] 폐품 공장」으로 플레이할 수 있습니다. 공개 버전의 플레이 경험과 의견을 바탕으로 성장 속도와 편의 기능을 개선하고 있습니다."
 media:
   poster: /media/junk-factory/key-art.webp
   alt: "폐품을 안고 달리는 캐릭터와 컨베이어 벨트 위 폐품을 동전으로 바꾸는 재활용 기계"
+  note: "대표 그림과 개발 중 Studio 화면(2026년 11월 12일 기록)입니다. 현재 공개 버전과 다를 수 있습니다."
   gallery:
     - src: /media/junk-factory/factory-overview.webp
-      alt: "위에서 본 공장 부지와 폐품장. 왼쪽 위에 보유 금액과 다음 설비 안내가 보인다."
+      alt: "개발 중 Studio 화면: 위에서 본 공장 부지와 폐품장"
     - src: /media/junk-factory/pets-lineup.webp
-      alt: "공장 앞 잔디밭에 줄지어 선 폐품 펫들"
+      alt: "개발 중 Studio 화면: 공장 앞 잔디밭에 줄지어 선 폐품 펫들"
     - src: /media/junk-factory/factory-line.webp
-      alt: "벨트를 따라 놓인 세척 분사기, 자석 분리기 같은 공장 설비"
+      alt: "개발 중 Studio 화면: 벨트를 따라 놓인 공장 설비"
 ---
 
-## Overview
-
-폐품장에서 캔, 병, 고철, 전자 폐품, 구리를 모아 내 공장 벨트에 넣고, 설비를 하나씩 사서 폐품의 가치를 올리는 타이쿤 게임입니다.
-
-## 지금 만들고 있는 것
-
-- 공장 라인: 세척 분사기부터 출하 크레인까지 핵심 설비 11단계
-- 환생: 환생할수록 수집과 운반이 자동화되는 단계별 해금
-- 펫과 부화장: 후반 콘텐츠로 배치
+폐품을 수집하고 공장에서 가공·판매하며 작은 작업장을 키워 보세요. 설비를 확장하고 운반과 생산을 자동화하면 반복 작업을 줄이며 공장을 성장시킬 수 있습니다. 알에서 얻은 펫을 수집하거나 재료를 모아 차량을 복원하는 목표도 기다립니다. 공장을 완성한 뒤에는 환생으로 성장 보너스를 얻고 다시 도전할 수 있습니다.

@@ -4,6 +4,8 @@ type Project = CollectionEntry<'projects'>;
 
 // Progress state shown on the site. Source visibility is a separate field (`private`).
 export const STAGES = {
+  live: '공개 운영 중',
+  operating: '운영 중',
   'in-use': '사용 중',
   active: '진행 중',
   inquiry: '문의 중',
