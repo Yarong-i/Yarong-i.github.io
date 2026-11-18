@@ -21,7 +21,7 @@ const short = (d?: string) => (d ? d.slice(5).replace('-', '.') : undefined);
 ---
 <div class="today" data-research-today data-date={iso}>
   <div class="head">
-    <p class="label">오늘의 주식 연구 {day && <span class="recent" data-recent>최근 기록</span>}</p>
+    <p class="label"><span data-today-label>{day ? '최근 주식 연구' : '오늘의 주식 연구'}</span> {day && <span class="recent" data-recent>최근 기록</span>}</p>
     {day ? (
       <p class="date"><span class="sr-only">추천 대상 거래일 </span><time datetime={iso}><span class="md">{parts.month}.{parts.day}</span><span class="dow">{parts.weekday}</span></time><span class="yr">추천 대상 거래일 · {parts.year}</span></p>
     ) : (
@@ -92,7 +92,11 @@ const short = (d?: string) => (d ? d.slice(5).replace('-', '.') : undefined);
   // The page is static, so whether the record is today's is decided in the browser (Asia/Seoul).
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date());
   document.querySelectorAll<HTMLElement>('[data-research-today][data-date]').forEach((el) => {
-    if (el.dataset.date === today) el.querySelector('[data-recent]')?.remove();
+    // Only a record for today's trading day is called 오늘의; anything older keeps 최근 주식 연구 + 최근 기록.
+    if (el.dataset.date !== today) return;
+    el.querySelector('[data-recent]')?.remove();
+    const label = el.querySelector('[data-today-label]');
+    if (label) label.textContent = '오늘의 주식 연구';
   });
 </script>
 <style>

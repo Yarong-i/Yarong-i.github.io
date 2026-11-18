@@ -8,14 +8,17 @@ name: Deploy to GitHub Pages
 # Every deploy - code change, schedule or manual - uses the latest records, so they never go back.
 # This workflow writes to no repository.
 #
-# The research server publishes at 08:55 / 09:15 / 15:55 / 16:08 KST and the data repository merges within a few
-# minutes; the schedule below picks that up. (GitHub may start scheduled runs some minutes late.)
+# Normal path: the research server publishes within a minute of a finalized recommendation (08:25-08:59 KST,
+# 15:35-16:18 KST), the data repository merges and then starts this workflow (workflow_dispatch).
+# The schedule below is only a retry for a missed or failed dispatch. Every run builds from the LATEST records,
+# so a late or repeated run never deploys older data. (GitHub may start scheduled runs some minutes late.)
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
   schedule:
+    - cron: '45,55 23 * * 0-4'  # 08:45 / 08:55 KST, Mon-Fri
     - cron: '10 0 * * 1-5'    # 09:10 KST
     - cron: '30 0 * * 1-5'    # 09:30 KST
     - cron: '15 7 * * 1-5'    # 16:15 KST

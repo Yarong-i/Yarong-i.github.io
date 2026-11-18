@@ -18,28 +18,47 @@ only on the data repository — not by branch rules. It has no access to the sit
 ## Data flow
 
 ```
-research server (YATC ASK, powered ~08:20–16:20 KST on weekdays)
-  publish timer (separate from the ASK worker; 08:55, 09:15, 15:55, 16:08 KST)
+research server (YATC ASK, powered ~08:20–16:20 KST on weekdays; ASK's own schedule and logic are unchanged)
+  publish timer, separate from the ASK worker:
+    every minute 08:25–08:59 and 15:35–15:59, every 5 min 09:00–09:55, every 2 min 16:00–16:18 KST
     export: reads the ASK database read-only, public fields only, no model call, no recomputation
-    unchanged since the last publish (ignoring exportedAt)? -> stop
+      - today's models without a finalized run: 발표 대기 until the send deadline (+ late grace),
+        then "발표 기한까지 기록된 추천이 없습니다"; earlier days never get placeholders
+    unchanged since the last publish (ignoring exportedAt)? -> stop   (so most runs do nothing)
     else commit research-export.json -> push yarong-research-data main (deploy key, that repository only)
-yarong-research-data: .github/workflows/merge.yml (on push of research-export.json)
-  check out the site code, merge with scripts/import-research-export.mjs (idempotent; published pre-market
-  records are never replaced), check with the site build, commit the merged records
-this repository: .github/workflows/deploy.yml (push to main, manual, weekdays 09:10 / 09:30 / 16:15 / 16:30 KST)
-  check out main + the data repository, npm run build (astro check, build, dist guard), deploy Pages
+yarong-research-data: .github/workflows/merge.yml (push of research-export.json, retries on a schedule)
+  always merges the LATEST export on main, with the site's importer (idempotent; published pre-market records
+  are never replaced), checks with the site build, commits the merged records,
+  then starts the site deploy with SITE_DEPLOY_TOKEN (skipped with a notice when the secret is absent)
+this repository: .github/workflows/deploy.yml
+  workflow_dispatch from the data repository (normal path), push to main, manual,
+  schedule as retry: weekdays 08:45 / 08:55 / 09:10 / 09:30 / 16:15 / 16:30 KST
+  check out main + the latest records, npm run build (astro check, build, dist guard), deploy Pages
 GitHub Pages serves the built static pages: every record stays readable while the server is off.
 ```
 
-- A failed export, push, merge or build changes nothing public; the next timer run, schedule or a manual workflow
-  run retries.
-- Re-running with the same export creates no commit and no record change.
-- Code-only deploys also build from the latest records, so records never go back.
-- The Pages environment deploys only from main.
-- The data repository cannot start this repository's workflow without a token for this repository, so the site
-  picks up new records on its schedule (GitHub may start scheduled runs some minutes late). For an immediate
-  deploy, run "Deploy to GitHub Pages" manually, or add a fine-grained token (Actions: write on this repository)
-  as a secret of the data repository and dispatch the workflow from merge.yml.
+Target: a recommendation sent around 08:30 is public within a few minutes, before 08:55.
+
+- A failed export, push, merge or deploy changes nothing public; the next timer run, scheduled retry or a manual
+  run repeats it with the same data and recovers. Re-running with the same export creates no commit.
+- No step can move records backwards: the server always exports the current database, merge and deploy always
+  read the latest main, pre-market records are never replaced, postmarket only moves from pending/provisional,
+  and performance files only move to a newer as-of date.
+- Home calls a record 오늘의 주식 연구 only when its trading day is today (KST, checked in the browser); otherwise
+  it shows 최근 주식 연구 with the 최근 기록 badge.
+
+## Setting up the immediate site deploy (owner only, once)
+
+The data repository's GITHUB_TOKEN cannot start a workflow in this repository, so it needs a token that can.
+
+1. GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token.
+   - Resource owner: Yarong-i · Repository access: **Only select repositories → Yarong-i/Yarong-i.github.io**
+   - Repository permissions: **Actions: Read and write** (Metadata: read-only is added automatically). Nothing else.
+   - Expiration: your choice; renew it before it expires (the scheduled deploys keep working without it).
+2. Store it as a secret of the data repository without showing it anywhere:
+   `gh secret set SITE_DEPLOY_TOKEN --repo Yarong-i/yarong-research-data` (paste the token when asked).
+3. Run "Merge research export" once (Actions → Run workflow) and check that its last step says
+   "Site deploy requested." and that "Deploy to GitHub Pages" starts in this repository.
 
 ## Source meaning (YATC ASK)
 
