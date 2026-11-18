@@ -5,7 +5,7 @@ import { defineConfig } from 'astro/config';
 const fixtures = process.env.RESEARCH_SOURCE === 'fixtures';
 
 export default defineConfig({
-  site: 'https://yarong-i.github.io',
+  site: 'https://yarong.kr',
   output: 'static',
   ...(fixtures ? { outDir: './dist-fixtures', cacheDir: './node_modules/.astro-fixtures' } : {}),
   // Writings are published exactly as written, so straight quotes and dashes are not rewritten.
