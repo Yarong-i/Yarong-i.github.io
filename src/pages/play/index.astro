@@ -1,0 +1,44 @@
+---
+import { getEntry } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+const junk = await getEntry('projects', 'junk-factory');
+---
+<BaseLayout title="미니게임 — YARONG" description="브라우저에서 바로 하는 미니게임과 Yarong이 만들고 있는 게임.">
+  <div class="page shell">
+    <p class="eyebrow">Play</p>
+    <h1 class="page-title">미니게임</h1>
+    <ul class="games">
+      <li>
+        <a class="game reaction" href="/play/reaction">
+          <span class="thumb" aria-hidden="true"><span class="sig"></span></span>
+          <span class="txt"><strong>반응속도 테스트</strong><span>신호가 바뀌는 순간 누르기. 5번 재서 평균과 최고 기록을 봅니다.</span><em>바로 하기 →</em></span>
+        </a>
+      </li>
+      {junk && (
+        <li>
+          <a class="game" href={junk.data.playUrl ?? `/projects/${junk.id}/`} {...(junk.data.playUrl ? { rel: 'noopener', target: '_blank' } : {})}>
+            <span class="thumb img">{junk.data.media && <img src={junk.data.media.poster} alt="" loading="lazy" />}</span>
+            <span class="txt"><strong>{junk.data.title}</strong><span>{junk.data.summary}</span><em>{junk.data.playUrl ? 'Roblox에서 플레이 ↗' : '공개 링크 준비 중 · 개발 기록 보기 →'}</em></span>
+          </a>
+        </li>
+      )}
+    </ul>
+  </div>
+</BaseLayout>
+<style>
+  .games { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr)); gap: 1rem; margin: 0; padding: 0; list-style: none; }
+  .game { display: grid; height: 100%; overflow: hidden; border: 1px solid var(--line); border-radius: 22px; background: var(--surface); transition: border-color var(--base) var(--ease), transform var(--base) var(--ease); }
+  .game:hover, .game:focus-visible { border-color: var(--muted); }
+  @media (hover: hover) and (prefers-reduced-motion: no-preference) { .game:hover { transform: translateY(-4px) rotate(-.4deg); } }
+  .game:active { transform: scale(.98); }
+  .thumb { display: grid; place-items: center; aspect-ratio: 16 / 9; overflow: hidden; background: #000; }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; transition: transform 700ms var(--ease); }
+  @media (prefers-reduced-motion: no-preference) { .game:hover .thumb img { transform: scale(1.06); } }
+  .reaction .thumb { background: linear-gradient(90deg, #B42318 50%, #12864A 50%); transition: background-position 300ms; }
+  .sig { width: 34%; aspect-ratio: 1; border-radius: 50%; border: 6px solid #fff; background: #B42318; transition: background-color 120ms linear; }
+  .reaction:hover .sig, .reaction:focus-visible .sig { background: #12864A; }
+  .txt { display: grid; gap: .4rem; padding: 1.25rem 1.4rem 1.5rem; }
+  .txt strong { font: 800 1.5rem var(--display); letter-spacing: -.03em; }
+  .txt span { color: var(--muted); line-height: 1.55; }
+  .txt em { margin-top: .4rem; font-style: normal; font-weight: 700; }
+</style>

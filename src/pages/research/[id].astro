@@ -1,0 +1,194 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import {
+  FILTER_SCORE, POSTMARKET_LABEL, PREMARKET_LABEL, STRATEGY_LABEL,
+  displayName, executedText, formatPct, formatResearchDate, formatStamp, getResearchDays, modelSlug, openToClose,
+  resultFor, strategyDecisions, type ResearchDay,
+} from '../../utils/research';
+
+export async function getStaticPaths() {
+  const days = await getResearchDays();
+  return days.map((day, i) => ({ params: { id: day.id }, props: { day, newer: days[i - 1], older: days[i + 1] } }));
+}
+interface Props { day: ResearchDay; newer?: ResearchDay; older?: ResearchDay; }
+const { day, newer, older } = Astro.props;
+const { data } = day;
+const date = formatResearchDate(data.date);
+const won = (v?: number) => (v === undefined ? '—' : `${v.toLocaleString('ko-KR')}원`);
+const shortDay = (iso?: string) => (iso ? iso.slice(5).replace('-', '.') : '');
+---
+<BaseLayout title={`${date} 주식 연구 — YARONG`} description={`${date} 거래일의 모델별 장전 추천, 선정 이유와 위험, 장후 결과, 모의 전략 성과.`}>
+  <article class="page shell">
+    <a class="arrow-link back" href="/research#records">날짜별 기록</a>
+    <p class="eyebrow">추천 대상 거래일</p>
+    <h1 class="page-title">{date}</h1>
+
+    <dl class="meta-grid">
+      <div><dt>홈페이지 등록</dt><dd>{formatStamp(data.registeredAt) ?? '—'}</dd></div>
+      {data.updatedAt && <div><dt>마지막 반영</dt><dd>{formatStamp(data.updatedAt)}</dd></div>}
+      <div><dt>출처</dt><dd>{data.source.system}{data.source.origins.length > 0 && <small> · {data.source.origins.join(' → ')}</small>}</dd></div>
+      <div><dt>정정 이력</dt><dd>{data.corrections.length ? `${data.corrections.length}건` : '없음'}</dd></div>
+    </dl>
+    {data.corrections.length > 0 && (
+      <ol class="corrections" aria-label="정정 이력">
+        {data.corrections.map((c) => <li><time>{formatStamp(c.at)}</time> {c.note}</li>)}
+      </ol>
+    )}
+    <p class="hint">발표 시각은 각 모델이 추천을 내보낸 시각이고, 등록 시각은 이 페이지에 처음 올린 시각입니다.</p>
+
+    {data.market === 'closed' ? <p class="closed"><strong>휴장</strong> 이 거래일에는 추천이 없습니다.</p> : null}
+    {data.market === 'open' && data.models.length === 0 && <p class="closed"><strong>발표 대기</strong> 아직 발표한 모델이 없습니다.</p>}
+
+    {data.models.map((run) => {
+      const decisions = strategyDecisions(run);
+      const slug = modelSlug(run.model);
+      return (
+        <section id={slug} class="model" aria-labelledby={`${slug}-h`}>
+          <header class="model-head">
+            <h2 id={`${slug}-h`}>{displayName(run)}{run.role && <span class="role">{run.role === 'operating' ? '운영' : '비교용 모의 운용'}</span>}</h2>
+            <p class="sessions">
+              <span data-status={run.premarket.status}>장전 {PREMARKET_LABEL[run.premarket.status]}{run.premarket.publishedAt && ` · ${formatStamp(run.premarket.publishedAt)}`}</span>
+              <span data-status={run.postmarket.status}>{POSTMARKET_LABEL[run.postmarket.status]}{run.postmarket.publishedAt && ` · ${formatStamp(run.postmarket.publishedAt)}`}</span>
+            </p>
+          </header>
+          <p class="model-id">모델 {run.model}{run.premarket.rankStatus && ` · ${run.premarket.rankStatus}`}</p>
+
+          {run.premarket.detail && <p class="detail">{run.premarket.detail}</p>}
+
+          {run.premarket.picks.length > 0 && (
+            <ol class="picks">
+              {run.premarket.picks.map((pick) => {
+                const res = resultFor(run, pick.ticker);
+                const change = openToClose(res);
+                const shown = res && res.status !== 'unconfirmed';
+                const orderText = pick.finalRank !== undefined
+                  ? `최종 ${pick.finalRank}순위${pick.rank !== undefined && pick.rank !== pick.finalRank ? ` (모델 ${pick.rank}순위)` : ''}`
+                  : pick.rank !== undefined ? `${pick.rank}순위` : `발표 순서 ${pick.order} · 순위 없음`;
+                return (
+                  <li>
+                    <div class="pick-head">
+                      <span class="order">{orderText}</span>
+                      <h3>{pick.name} <small>{pick.ticker}</small></h3>
+                      <span class="score">{pick.score !== undefined ? <>{pick.score}<small>점</small></> : <small>점수 없음</small>}</span>
+                    </div>
+                    <dl class="prices">
+                      <div><dt>전일 종가</dt><dd>{shown ? won(res?.prevClose) : '—'}</dd></div>
+                      <div><dt>시가</dt><dd>{shown ? won(res?.open) : '—'}</dd></div>
+                      <div><dt>종가</dt><dd>{shown ? won(res?.close) : '—'}{res?.status === 'provisional' && <small> 잠정</small>}</dd></div>
+                      <div><dt>종목 시가→종가</dt><dd class:list={[{ up: (change ?? 0) > 0, down: (change ?? 0) < 0 }]}>{change !== undefined ? formatPct(change) : run.postmarket.status === 'pending' ? '장후 대기' : '미확인'}</dd></div>
+                    </dl>
+                    {res?.basis && res.status !== 'unconfirmed' && <p class="basis">가격 기준: {res.basis}{res.status === 'provisional' && ' · 잠정 종가, 다음 거래일 확정'}</p>}
+                    {res?.status === 'unconfirmed' && res.note && <p class="basis">{res.note}</p>}
+                    <div class="texts">
+                      {pick.reasons.length > 0 && <div><h4>선정 이유</h4><ul>{pick.reasons.map((t) => <li>{t}</li>)}</ul></div>}
+                      {pick.risks.length > 0 && <div><h4>위험</h4><ul>{pick.risks.map((t) => <li>{t}</li>)}</ul></div>}
+                      {pick.changeConditions.length > 0 && <div><h4>판단이 바뀌는 조건</h4><ul>{pick.changeConditions.map((t) => <li>{t}</li>)}</ul></div>}
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+
+          {run.premarket.excluded.length > 0 && (
+            <div class="excluded">
+              <h3>점검에서 제외된 제안</h3>
+              <ul>
+                {run.premarket.excluded.map((e) => (
+                  <li><strong>{e.name ?? e.ticker}</strong> <small>{e.ticker}{e.rank !== undefined && ` · 모델 ${e.rank}순위`}{e.score !== undefined && ` · ${e.score}점`}</small>{e.reason && <span> — {e.reason}</span>}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div class="strategy">
+            <h3>모의 전략 비교</h3>
+            <div class="strat-grid">
+              {(['base', 'filter10'] as const).map((key) => {
+                const s = run.strategy?.[key];
+                return (
+                  <dl>
+                    <dt class="strat-name">{STRATEGY_LABEL[key]}</dt>
+                    <dd><span class="k">매수 조건</span><span data-buys={String(decisions[key].buys)}>{decisions[key].text}</span></dd>
+                    <dd><span class="k">모의 매수</span><span>{executedText(run, key)}</span></dd>
+                    <dd><span class="k">당일</span><span>{s?.dayPct !== undefined ? `${formatPct(s.dayPct)}${s.final ? '' : ' (잠정)'}` : '미연동'}</span></dd>
+                    <dd><span class="k">누적</span><span>{s?.cumPct !== undefined ? `${formatPct(s.cumPct)} · ${shortDay(s.startDate)}~${shortDay(s.asOf)}` : '미연동'}</span></dd>
+                  </dl>
+                );
+              })}
+            </div>
+            <p class="basis">매수 조건은 이 페이지의 규칙 확인이고, 모의 매수와 수익률은 연구 시스템 장부의 확정 값입니다. {FILTER_SCORE}점은 필터 전략의 매수 조건일 뿐 추천 공개 여부와는 관계없습니다. 비용 전 · 실제 주문 아님.</p>
+          </div>
+        </section>
+      );
+    })}
+
+    <nav class="pager" aria-label="다른 날짜">
+      {older ? <a class="btn btn-ghost" href={`/research/${older.id}/`}>← {formatResearchDate(older.data.date)}</a> : <span></span>}
+      {newer && <a class="btn btn-ghost" href={`/research/${newer.id}/`}>{formatResearchDate(newer.data.date)} →</a>}
+    </nav>
+    <p class="hint">개인 연구 기록이며 투자 권유가 아닙니다.</p>
+  </article>
+</BaseLayout>
+<style>
+  .back { margin-bottom: 1.25rem; }
+  .meta-grid { display: flex; flex-wrap: wrap; gap: .75rem 2.5rem; margin: 0; padding: .9rem 0; border-block: 1px solid var(--line); }
+  .meta-grid dt { color: var(--faint); font: 600 .75rem var(--body); }
+  .meta-grid dd { margin: .15rem 0 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .meta-grid small { color: var(--faint); font-weight: 500; }
+  .corrections { margin: .75rem 0 0; padding-left: 1.2rem; color: var(--muted); }
+  .hint { margin: .75rem 0 0; color: var(--faint); font-size: .82rem; }
+  .closed { margin: 2rem 0 0; padding: 1rem 0; border-block: 1px solid var(--line); color: var(--muted); }
+  .closed strong { margin-right: .5rem; color: var(--text); }
+
+  .model { margin-top: clamp(2.5rem, 5vw, 3.5rem); padding-top: 1rem; border-top: 2px solid var(--text); scroll-margin-top: 5rem; }
+  .model-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: .5rem 1.5rem; }
+  .model-head h2 { display: flex; flex-wrap: wrap; align-items: baseline; gap: .6rem; margin: 0; font: 800 clamp(1.4rem, 3vw, 2rem) var(--display); letter-spacing: -.03em; overflow-wrap: anywhere; }
+  .role { padding: .1rem .5rem; border: 1px solid var(--line-strong); border-radius: 6px; color: var(--muted); font: 600 .75rem var(--body); letter-spacing: 0; }
+  .model-id { margin: .3rem 0 0; color: var(--faint); font-size: .8rem; }
+  .sessions { display: flex; flex-wrap: wrap; gap: .4rem 1rem; margin: 0; color: var(--muted); font-size: .88rem; font-variant-numeric: tabular-nums; }
+  [data-status='failed'] { color: #FF7A6E; }
+  [data-status='pending'] { color: #F5C451; }
+  .detail { margin: .9rem 0 0; color: var(--muted); }
+
+  .picks { display: grid; gap: 1.5rem; margin: 1.25rem 0 0; padding: 0; list-style: none; }
+  .picks > li { padding-top: 1rem; border-top: 1px solid var(--line); }
+  .pick-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: baseline; gap: .75rem; }
+  .order { color: var(--faint); font: 600 .78rem var(--body); white-space: nowrap; }
+  .pick-head h3 { margin: 0; font: 800 clamp(1.3rem, 2.6vw, 1.7rem) var(--display); letter-spacing: -.02em; }
+  .pick-head h3 small { color: var(--faint); font: 500 .85rem var(--body); }
+  .score { font: 800 clamp(1.5rem, 3vw, 2rem)/1 var(--display); font-variant-numeric: tabular-nums; }
+  .score small { margin-left: .1rem; color: var(--muted); font: 500 .8rem var(--body); }
+  .prices { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .5rem 1rem; margin: .9rem 0 0; font-variant-numeric: tabular-nums; }
+  .prices dt { color: var(--faint); font: 600 .75rem var(--body); }
+  .prices dd { margin: .1rem 0 0; font-weight: 700; }
+  .prices dd small { color: #F5C451; font: 600 .72rem var(--body); }
+  .prices dd.up { color: #FF7A6E; }
+  .prices dd.down { color: #7FA6FF; }
+  .basis { margin: .5rem 0 0; color: var(--faint); font-size: .8rem; }
+  .texts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem 1.5rem; margin-top: 1rem; }
+  .texts h4 { margin: 0 0 .4rem; font: 700 .85rem var(--body); }
+  .texts ul { margin: 0; padding-left: 1.1rem; color: var(--muted); font-size: .92rem; line-height: 1.65; }
+  .texts li + li { margin-top: .4rem; }
+  .excluded { margin-top: 1.25rem; padding-top: .9rem; border-top: 1px dashed var(--line-strong); }
+  .excluded h3 { margin: 0 0 .4rem; color: var(--muted); font: 700 .85rem var(--body); }
+  .excluded ul { margin: 0; padding-left: 1.1rem; color: var(--muted); font-size: .88rem; line-height: 1.6; }
+  .excluded small { color: var(--faint); }
+
+  .strategy { margin-top: 1.5rem; padding: 1rem 1.1rem; border-radius: 14px; background: #0F1116; }
+  .strategy h3 { margin: 0 0 .6rem; font: 700 .9rem var(--body); }
+  .strat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem 1.5rem; }
+  .strat-grid dl { display: grid; gap: .3rem; margin: 0; }
+  .strat-name { font: 700 .9rem var(--body); }
+  .strat-grid dd { display: grid; grid-template-columns: 4.5rem minmax(0, 1fr); gap: .5rem; margin: 0; font-size: .88rem; font-variant-numeric: tabular-nums; }
+  .k { color: var(--faint); font-weight: 600; }
+  [data-buys='false'] { color: var(--muted); }
+  .pager { display: flex; justify-content: space-between; gap: 1rem; margin: 3rem 0 1rem; }
+  @media (max-width: 860px) { .texts { grid-template-columns: 1fr; } }
+  @media (max-width: 560px) {
+    .prices { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .strat-grid { grid-template-columns: 1fr; }
+    .pick-head { grid-template-columns: minmax(0, 1fr) auto; }
+    .order { grid-column: 1 / -1; }
+  }
+</style>

@@ -1,0 +1,214 @@
+---
+// Reaction-time test. Flow: idle → wait (red) → go (green) → press → next round; 5 rounds, then average and best.
+// Pressing during the red wait is a false start: it is not recorded and the same round starts again.
+// Results are kept only in this browser (best time). There is no ranking or comparison with other people.
+interface Props { rounds?: number; }
+const { rounds = 5 } = Astro.props;
+---
+<div class="rt" data-rt data-rounds={rounds}>
+  <div class="rt-bar">
+    <ol class="rt-dots" aria-label={`${rounds}회 중 진행 상황`}>
+      {Array.from({ length: rounds }, (_, i) => <li data-dot={i}><span class="sr-only">{i + 1}회</span></li>)}
+    </ol>
+    <p class="rt-best">이 기기 최고 기록 <strong data-rt-best>—</strong></p>
+  </div>
+  <button class="rt-pad" type="button" data-state="idle" data-rt-pad aria-describedby="rt-help">
+    <span class="rt-step" data-rt-step>{rounds}회 측정</span>
+    <span class="rt-big" data-rt-big>눌러서 시작</span>
+    <span class="rt-sub" data-rt-sub>빨간 화면에서 기다리다가 초록색으로 바뀌는 순간 누르세요.</span>
+  </button>
+  <p id="rt-help" class="rt-help">마우스 클릭, 화면 터치, 스페이스 키 모두 됩니다. 빨간색일 때 누르면 오입력으로 처리하고 그 회차를 다시 시작합니다.</p>
+  <noscript><p class="rt-help">반응속도 테스트는 자바스크립트가 켜져 있어야 작동합니다.</p></noscript>
+  <div class="rt-result" data-rt-result hidden>
+    <ol class="rt-times" data-rt-times aria-label="회차별 기록"></ol>
+    <div class="rt-foot">
+      <dl class="rt-stats">
+        <div><dt>최고</dt><dd data-rt-top>—</dd></div>
+        <div><dt>오입력</dt><dd data-rt-early>0회</dd></div>
+      </dl>
+      <button class="btn btn-primary rt-again" type="button" data-rt-again>다시 하기 <span class="arrow" aria-hidden="true">↻</span></button>
+    </div>
+    <p class="rt-note">기록은 이 브라우저에만 저장되고, 다른 사람과 비교하지 않습니다.</p>
+  </div>
+  <p class="sr-only" aria-live="polite" data-rt-live></p>
+</div>
+
+<script>
+  type State = 'idle' | 'wait' | 'go' | 'early' | 'shown' | 'done';
+  const STORE_KEY = 'yarong:reaction-best';
+  const readBest = (): number | null => {
+    try { const v = Number(localStorage.getItem(STORE_KEY)); return Number.isFinite(v) && v > 0 ? v : null; } catch { return null; }
+  };
+  const writeBest = (v: number) => { try { localStorage.setItem(STORE_KEY, String(v)); } catch { /* storage unavailable */ } };
+
+  document.querySelectorAll<HTMLElement>('[data-rt]').forEach((root) => {
+    const rounds = Number(root.dataset.rounds) || 5;
+    const q = <T extends Element>(sel: string) => root.querySelector<T>(sel)!;
+    const pad = q<HTMLButtonElement>('[data-rt-pad]');
+    const step = q<HTMLElement>('[data-rt-step]');
+    const big = q<HTMLElement>('[data-rt-big]');
+    const sub = q<HTMLElement>('[data-rt-sub]');
+    const live = q<HTMLElement>('[data-rt-live]');
+    const result = q<HTMLElement>('[data-rt-result]');
+    const bestEl = q<HTMLElement>('[data-rt-best]');
+    const dots = root.querySelectorAll<HTMLElement>('[data-dot]');
+
+    let state: State = 'idle';
+    let times: number[] = [];
+    let early = 0;
+    let timer = 0;
+    let goAt = 0;
+
+    const showBest = () => { const b = readBest(); bestEl.textContent = b ? `${b} ms` : '—'; };
+    const set = (next: State, title: string, detail: string, announce = true) => {
+      state = next;
+      pad.dataset.state = next;
+      big.textContent = title;
+      sub.textContent = detail;
+      step.textContent = next === 'done' ? `${rounds}회 평균` : `${Math.min(times.length + 1, rounds)} / ${rounds}회`;
+      if (announce) live.textContent = `${title}. ${detail}`;
+    };
+    const paintDots = () => dots.forEach((dot, i) => {
+      dot.classList.toggle('is-done', i < times.length);
+      dot.classList.toggle('is-now', i === times.length && state !== 'done');
+      dot.title = times[i] ? `${i + 1}회 ${times[i]} ms` : '';
+    });
+
+    const startWait = () => {
+      window.clearTimeout(timer);
+      set('wait', '기다리세요…', '초록색이 되면 바로 누르세요.');
+      paintDots();
+      timer = window.setTimeout(() => {
+        goAt = 0;
+        set('go', '지금!', '누르세요', false);
+        // Start the clock on the frame that shows the green screen.
+        requestAnimationFrame((t) => { goAt = t; });
+      }, 1200 + Math.random() * 2800);
+    };
+
+    const finish = () => {
+      const avg = Math.round(times.reduce((a, b) => a + b, 0) / times.length);
+      const top = Math.min(...times);
+      const prev = readBest();
+      if (!prev || top < prev) writeBest(top);
+      showBest();
+      set('done', `${avg} ms`, '판을 누르면 처음부터 다시 잽니다.', false);
+      live.textContent = `측정 끝. 평균 ${avg} ms, 최고 ${top} ms, 오입력 ${early}회.`;
+      q<HTMLElement>('[data-rt-top]').textContent = `${top} ms`;
+      q<HTMLElement>('[data-rt-early]').textContent = `${early}회`;
+      // Each round as a bar scaled to the slowest round, so the rounds can be compared at a glance.
+      const slowest = Math.max(...times);
+      q<HTMLElement>('[data-rt-times]').innerHTML = times
+        .map((t, i) => `<li${t === top ? ' class="is-top"' : ''} style="--w:${Math.max(8, Math.round((t / slowest) * 100))}%"><span class="n">${i + 1}회</span><span class="bar" aria-hidden="true"></span><strong>${t} ms</strong>${t === top ? '<em>최고</em>' : ''}</li>`).join('');
+      result.hidden = false;
+      root.classList.add('is-done');
+      paintDots();
+    };
+
+    const reset = () => {
+      window.clearTimeout(timer);
+      times = []; early = 0;
+      result.hidden = true;
+      root.classList.remove('is-done');
+      startWait();
+    };
+
+    const press = (stamp: number) => {
+      switch (state) {
+        case 'idle': case 'early': case 'shown':
+          startWait(); break;
+        case 'wait':
+          window.clearTimeout(timer);
+          early += 1;
+          set('early', '너무 빨라요', '오입력이라 기록하지 않았어요. 다시 누르면 같은 회차를 시작합니다.');
+          break;
+        case 'go': {
+          if (!goAt) return;
+          const t = Math.max(1, Math.round(stamp - goAt));
+          times.push(t);
+          if (times.length >= rounds) { finish(); break; }
+          set('shown', `${t} ms`, '다시 누르면 다음 회차를 시작합니다.');
+          paintDots();
+          break;
+        }
+        case 'done':
+          reset(); break;
+      }
+    };
+
+    pad.addEventListener('pointerdown', (event) => {
+      if (event.pointerType === 'mouse' && event.button !== 0) return;
+      event.preventDefault();
+      pad.focus({ preventScroll: true });
+      press(event.timeStamp);
+    });
+    pad.addEventListener('keydown', (event) => {
+      if (event.key !== ' ' && event.key !== 'Enter') return;
+      event.preventDefault();
+      if (!event.repeat) press(event.timeStamp);
+    });
+    // Keyboard "click" events are handled in keydown; ignore the synthetic click so nothing fires twice.
+    pad.addEventListener('click', (event) => event.preventDefault());
+    q<HTMLButtonElement>('[data-rt-again]').addEventListener('click', () => { reset(); pad.focus({ preventScroll: true }); });
+    // Leaving the tab mid-round would make the timing unfair, so the round restarts without counting a false start.
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden || (state !== 'wait' && state !== 'go')) return;
+      window.clearTimeout(timer);
+      set('idle', '잠시 멈췄어요', '다시 누르면 이번 회차를 시작합니다.');
+    });
+
+    showBest();
+    paintDots();
+  });
+</script>
+
+<style>
+  .rt { --wait: #B42318; --go: #12864A; --early: #6B4A00; display: grid; gap: .9rem; }
+  .rt-bar { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+  .rt-dots { display: flex; gap: .4rem; margin: 0; padding: 0; list-style: none; }
+  .rt-dots li { width: 1.6rem; height: .4rem; border-radius: 999px; background: var(--line-strong); transition: background-color var(--fast); }
+  .rt-dots li.is-now { background: var(--muted); }
+  .rt-dots li.is-done { background: var(--text); }
+  .rt-best { margin: 0; color: var(--muted); font: 500 .85rem var(--body); }
+  .rt-best strong { color: var(--text); font-variant-numeric: tabular-nums; }
+
+  .rt-pad { position: relative; display: grid; place-content: center; justify-items: center; gap: .6rem; width: 100%; min-height: clamp(15rem, 40vh, 24rem); padding: 2rem 1.25rem; border: 1px solid var(--line-strong); border-radius: 20px; background: var(--surface); color: var(--text); text-align: center; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; transition: background-color 90ms linear, border-color 90ms linear, transform 140ms var(--ease); }
+  .rt-pad:hover { border-color: var(--muted); }
+  .rt-pad:active { transform: scale(.985); }
+  .rt-pad:focus-visible { outline: 3px solid var(--text); outline-offset: 3px; }
+  .rt-step { color: var(--muted); font: 600 .8rem var(--body); letter-spacing: .08em; }
+  .rt-big { font: 800 clamp(2.4rem, 7vw, 4.6rem)/1 var(--display); letter-spacing: -.045em; font-variant-numeric: tabular-nums; }
+  .rt-sub { max-width: 26rem; color: var(--muted); font-size: clamp(.95rem, 1.6vw, 1.05rem); line-height: 1.5; }
+  .rt-pad[data-state='wait'] { background: var(--wait); border-color: var(--wait); }
+  .rt-pad[data-state='go'] { background: var(--go); border-color: #3FD18A; }
+  .rt-pad[data-state='early'] { background: var(--early); border-color: #E3A008; }
+  .rt-pad:is([data-state='wait'], [data-state='go'], [data-state='early']) :is(.rt-step, .rt-sub) { color: rgba(255, 255, 255, .88); }
+  .rt-pad[data-state='done'] { border-color: var(--text); background: #0B0D11; }
+  .rt-pad[data-state='done'] .rt-big { font-size: clamp(3rem, 9vw, 6rem); }
+  @media (prefers-reduced-motion: no-preference) {
+    .rt-pad[data-state='go'] .rt-big { animation: rt-pop 160ms var(--ease); }
+    .rt-pad[data-state='early'] .rt-big { animation: rt-shake 320ms var(--ease); }
+  }
+  @keyframes rt-pop { from { transform: scale(.88); } }
+  @keyframes rt-shake { 25% { transform: translateX(-6px); } 50% { transform: translateX(5px); } 75% { transform: translateX(-3px); } }
+
+  .rt-help { margin: 0; color: var(--faint); font-size: .85rem; line-height: 1.55; }
+  .rt.is-done .rt-help { display: none; }
+  .rt-result { display: grid; gap: 1rem; padding-top: .25rem; }
+  .rt-result[hidden] { display: none; }
+  .rt-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+  .rt-stats { display: flex; gap: clamp(1.5rem, 4vw, 3rem); margin: 0; }
+  .rt-stats div { display: grid; gap: .2rem; }
+  .rt-stats dt { color: var(--muted); font: 600 .8rem var(--body); }
+  .rt-stats dd { margin: 0; font: 800 clamp(1.3rem, 2.6vw, 1.7rem)/1.1 var(--display); letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+  .rt-times { display: grid; gap: .45rem; margin: 0; padding: 0; list-style: none; }
+  .rt-times :global(li) { display: grid; grid-template-columns: 2.6rem minmax(0, 1fr) 4.6rem 2.4rem; align-items: center; gap: .75rem; color: var(--muted); font-size: .9rem; font-variant-numeric: tabular-nums; }
+  .rt-times :global(.bar) { height: .55rem; border-radius: 999px; background: linear-gradient(var(--line-strong), var(--line-strong)) 0 0 / var(--w) 100% no-repeat, rgba(255, 255, 255, .05); }
+  .rt-times :global(li strong) { color: var(--text); text-align: right; }
+  .rt-times :global(li em) { color: #7BE3AF; font: 700 .78rem var(--body); font-style: normal; }
+  .rt-times :global(li.is-top .bar) { background: linear-gradient(#3FD18A, #3FD18A) 0 0 / var(--w) 100% no-repeat, rgba(255, 255, 255, .05); }
+  .rt-note { margin: 0; color: var(--faint); font-size: .8rem; }
+  .rt-again { min-height: 3.25rem; }
+  .rt-again:active { transform: scale(.97); }
+  @media (max-width: 480px) { .rt-again { flex: 1 1 100%; } }
+</style>

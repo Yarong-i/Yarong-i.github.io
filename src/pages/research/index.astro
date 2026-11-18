@@ -1,0 +1,171 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ResearchToday from '../../components/ResearchToday.astro';
+import {
+  FILTER_SCORE, POSTMARKET_LABEL, PREMARKET_LABEL, STRATEGY_LABEL,
+  displayName, formatPct, formatResearchDate, formatStamp, getPerformance, getResearchDays, isoDay, modelSlug, modelsIn,
+} from '../../utils/research';
+const days = await getResearchDays();
+const performance = await getPerformance();
+const models = modelsIn(days);
+const perf = (model: string, strategy: 'base' | 'filter10') => performance.find((p) => p.data.model === model && p.data.strategy === strategy);
+const nameOf = (model: string) => {
+  const p = performance.find((x) => x.data.model === model);
+  if (p?.data.label) return p.data.label;
+  const run = days.flatMap((d) => d.data.models).find((m) => m.model === model);
+  return run ? displayName(run) : model;
+};
+const md = (d?: Date) => (d ? isoDay(d).slice(5).replace('-', '.') : '');
+---
+<BaseLayout title="주식 연구 — YARONG" description="모델별 장전 추천과 점수, 장후 결과, 모의 전략 성과를 날짜별로 기록합니다.">
+  <div class="page shell">
+    <p class="eyebrow">Stock research</p>
+    <h1 class="page-title">주식 연구</h1>
+
+    <div class="top">
+      <section aria-label="가장 최근 거래일"><ResearchToday day={days[0]} performance={performance} /></section>
+      <div class="howto">
+        <h2>공개 기록과 모의 전략은 따로 봅니다</h2>
+        <ol>
+          <li><b>장전</b> 모델마다 추천 종목과 점수를 발표합니다. 점수와 관계없이 모든 추천을 공개합니다.</li>
+          <li><b>장후</b> 같은 날짜에 정규장 시가·종가를 더합니다. 시가→종가는 종목 등락률입니다.</li>
+          <li><b>전략</b> 모의 전략 성과는 연구 시스템이 확정한 값만 옮깁니다.</li>
+        </ol>
+        <p class="note">개인 연구 기록이며 투자 권유가 아닙니다. 확인되지 않은 값은 0으로 채우지 않습니다.</p>
+      </div>
+    </div>
+
+    <section id="strategy" class="block" aria-labelledby="strategy-h">
+      <div class="section-head"><h2 id="strategy-h">모의 전략 성과</h2></div>
+      <dl class="rules">
+        <div><dt>{STRATEGY_LABEL.base}</dt><dd>모델의 1순위 추천을 매수합니다.</dd></div>
+        <div><dt>{STRATEGY_LABEL.filter10}</dt><dd>같은 1순위 추천이 {FILTER_SCORE}점 이상일 때만 매수합니다. {FILTER_SCORE}점은 매수 조건이며, {FILTER_SCORE}점 미만 추천도 모두 공개합니다.</dd></div>
+      </dl>
+      {models.length > 0 ? (
+        <div class="perf">
+          {models.map((model) => (
+            <div class="perf-model">
+              <h3>{nameOf(model)} <small>{model}</small></h3>
+              <ul>
+                {(['base', 'filter10'] as const).map((key) => {
+                  const p = perf(model, key);
+                  return (
+                    <li>
+                      <span class="perf-name">{STRATEGY_LABEL[key]}</span>
+                      {p ? (
+                        <span class="perf-val">
+                          <strong>{formatPct(p.data.cumulativePct)}</strong>
+                          <small>누적 {p.data.startDate ? `${md(p.data.startDate)}~` : ''}{md(p.data.asOf)} 기준{p.data.tradingDays !== undefined && ` · 거래일 ${p.data.tradingDays}`}{p.data.trades !== undefined && ` · 모의 매수 ${p.data.trades}회`}</small>
+                          {p.data.includesProvisional.length > 0 && <small class="warn">잠정 종가 포함: {p.data.includesProvisional.map((d) => d.slice(5).replace('-', '.')).join(', ')} (다음 거래일 확정)</small>}
+                          {p.data.unverifiedCorrections.length > 0 && <small class="warn">KRX 공식 미대조 정정 종가 포함: {p.data.unverifiedCorrections.map((d) => d.slice(5).replace('-', '.')).join(', ')}</small>}
+                          <small>{p.data.basis} · 출처 {p.data.source}</small>
+                        </span>
+                      ) : (
+                        <span class="perf-val"><strong class="pending">미연동</strong><small>연구 시스템의 확정 성과가 아직 연결되지 않았습니다.</small></span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+        </div>
+      ) : <p class="empty">기록이 생기면 모델별로 표시합니다.</p>}
+    </section>
+
+    <section id="records" class="block" aria-labelledby="records-h">
+      <div class="section-head"><h2 id="records-h">날짜별 기록</h2><span class="meta">{days.length}일</span></div>
+      {days.length > 0 ? (
+        <ol class="days">
+          {days.map((d) => (
+            <li>
+              <a class="day-date" href={`/research/${d.id}/`}>{formatResearchDate(d.data.date)}</a>
+              {d.data.market === 'closed' ? <p class="closed">휴장</p> : (
+                <ul class="runs">
+                  {d.data.models.map((run) => (
+                    <li>
+                      <a href={`/research/${d.id}/#${modelSlug(run.model)}`}>
+                        <span class="model">{displayName(run, true)}</span>
+                        <span class="picks">
+                          {run.premarket.status === 'published'
+                            ? run.premarket.picks.map((p) => <span class="pick">{p.name} <small>{p.ticker}</small> <b>{p.score !== undefined ? `${p.score}점` : '점수 없음'}</b></span>)
+                            : <span class:list={['state', run.premarket.status]}>{PREMARKET_LABEL[run.premarket.status]}</span>}
+                        </span>
+                        <span class="sessions">
+                          <span>장전 {run.premarket.publishedAt ? formatStamp(run.premarket.publishedAt, false) : PREMARKET_LABEL[run.premarket.status]}</span>
+                          <span>{POSTMARKET_LABEL[run.postmarket.status]}</span>
+                        </span>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p class="empty">아직 등록한 기록이 없습니다.</p>
+      )}
+    </section>
+
+    <section class="block past">
+      <div class="section-head"><h2>지난 연구 프로젝트</h2></div>
+      <ul>
+        <li><a class="arrow-link" href="/projects/stock-strategy-bot/">주식 전략 연구</a></li>
+        <li><a class="arrow-link" href="/projects/local-alpha-agent/">Local / Autonomous Alpha Agent</a></li>
+      </ul>
+    </section>
+  </div>
+</BaseLayout>
+<style>
+  .top { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); gap: clamp(1.25rem, 4vw, 3.5rem); }
+  .howto h2 { margin: 0 0 1rem; font: 700 1.15rem var(--display); }
+  .howto ol { display: grid; gap: .75rem; margin: 0; padding: 0; list-style: none; color: var(--muted); }
+  .howto b { display: inline-block; min-width: 2.6rem; color: var(--text); }
+  .note { margin: 1.25rem 0 0; color: var(--faint); font-size: .85rem; }
+  .block { margin-top: clamp(3rem, 6vw, 4.5rem); }
+  .section-head h2 { font-size: clamp(1.5rem, 3vw, 2.2rem); }
+
+  .rules { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem 2rem; margin: 1.25rem 0; }
+  .rules dt { font-weight: 700; }
+  .rules dd { margin: .2rem 0 0; color: var(--muted); font-size: .92rem; }
+  .perf { display: grid; gap: 1rem; }
+  .perf-model h3 { margin: 0 0 .4rem; font: 700 .9rem var(--body); }
+  .perf-model h3 small { color: var(--faint); font-weight: 500; }
+  .perf-val small.warn { color: #F5C451; }
+  .perf-model ul { display: grid; grid-template-columns: 1fr 1fr; margin: 0; padding: 0; list-style: none; border-block: 1px solid var(--line); }
+  .perf-model li { display: grid; gap: .3rem; padding: .9rem 1rem .9rem 0; }
+  .perf-model li + li { padding-left: 1rem; border-left: 1px solid var(--line); }
+  .perf-name { color: var(--muted); font: 600 .85rem var(--body); }
+  .perf-val { display: grid; gap: .15rem; }
+  .perf-val strong { font: 800 1.5rem var(--display); font-variant-numeric: tabular-nums; }
+  .perf-val strong.pending { color: var(--faint); font-size: 1.2rem; }
+  .perf-val small { color: var(--faint); font-size: .78rem; }
+
+  .days { display: grid; margin: 0; padding: 0; list-style: none; }
+  .days > li { display: grid; grid-template-columns: 10rem minmax(0, 1fr); gap: .5rem 1.5rem; padding: .9rem 0; border-bottom: 1px solid var(--line); }
+  .day-date { align-self: start; font: 700 1rem var(--display); font-variant-numeric: tabular-nums; }
+  .closed { margin: 0; color: var(--muted); }
+  .runs { display: grid; gap: .4rem; margin: 0; padding: 0; list-style: none; }
+  .runs a { display: grid; grid-template-columns: 9rem minmax(0, 1fr) auto; gap: .3rem 1rem; align-items: baseline; padding: .35rem .5rem; margin: -.35rem -.5rem; border-radius: 8px; transition: background-color var(--fast); }
+  .runs a:hover, .runs a:focus-visible { background: rgba(var(--light), .05); }
+  .model { color: var(--muted); font: 600 .82rem var(--body); overflow-wrap: anywhere; }
+  .picks { display: flex; flex-wrap: wrap; gap: .2rem 1rem; }
+  .pick { font-weight: 600; }
+  .pick small { color: var(--faint); font-weight: 500; }
+  .pick b { font-variant-numeric: tabular-nums; }
+  .state { color: var(--muted); }
+  .state.failed { color: #FF7A6E; }
+  .state.pending { color: #F5C451; }
+  .sessions { display: flex; gap: .75rem; color: var(--faint); font-size: .8rem; white-space: nowrap; }
+  .past ul { display: flex; flex-wrap: wrap; gap: 1rem 2.5rem; margin: 1.25rem 0 0; padding: 0; list-style: none; }
+  @media (max-width: 860px) {
+    .top, .rules { grid-template-columns: 1fr; }
+    .days > li { grid-template-columns: 1fr; }
+    .runs a { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 520px) {
+    .perf-model ul { grid-template-columns: 1fr; }
+    .perf-model li + li { padding-left: 0; border-left: 0; border-top: 1px solid var(--line); }
+  }
+</style>

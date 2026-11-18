@@ -1,18 +1,36 @@
+---
+const groups: ReadonlyArray<readonly [string, ReadonlyArray<readonly [string, string]>]> = [
+  ['둘러보기', [['/projects', '프로젝트'], ['/research', '주식 연구'], ['/play', '미니게임'], ['/portfolio', '포트폴리오']]],
+  ['기록', [['/writings', '글'], ['/archive', '아카이브'], ['/about', '소개']]],
+  ['연락', [['/contact', '문의'], ['https://github.com/Yarong-i', 'GitHub']]],
+];
+---
 <footer>
   <div class="shell top">
-    <p>YARONG</p>
-    <a class="arrow-link" href="#content">Back to top</a>
+    <a class="mark" href="/">YARONG</a>
+    <div class="groups">
+      {groups.map(([title, links]) => (
+        <div>
+          <p class="meta">{title}</p>
+          <ul>{links.map(([href, label]) => <li><a class="text-link" href={href} rel={href.startsWith('http') ? 'me' : undefined}>{label}</a></li>)}</ul>
+        </div>
+      ))}
+    </div>
   </div>
   <div class="shell bottom">
     <span>© {new Date().getFullYear()} YARONG</span>
-    <span>SEOUL, KR</span>
-    <span>BUILT WITH ASTRO</span>
+    <a class="arrow-link" href="#content">맨 위로</a>
   </div>
 </footer>
 <style>
-  footer { margin-top: clamp(5rem, 12vw, 12rem); border-top: 1px solid var(--line); }
-  .top { display: flex; justify-content: space-between; align-items: end; min-height: 310px; padding-block: 4rem; }
-  .top p { margin: 0; font: 500 clamp(2rem, 5vw, 5rem)/1 var(--sans); letter-spacing: -.05em; }
-  .bottom { display: flex; justify-content: space-between; gap: 1rem; padding-block: 1.2rem; border-top: 1px solid var(--line); color: var(--muted); font: .6rem var(--mono); letter-spacing: .08em; }
-  @media (max-width: 600px) { .top { display: block; min-height: 240px; } .top .arrow-link { margin-top: 3rem; } .bottom span:nth-child(2) { display: none; } }
+  footer { margin-top: clamp(2.5rem, 5vw, 4rem); border-top: 1px solid var(--line); }
+  .top { display: flex; justify-content: space-between; gap: 2rem 4rem; padding-block: clamp(2.5rem, 5vw, 4rem); }
+  .mark { font: 800 clamp(1.4rem, 2.4vw, 2rem)/1 var(--display); letter-spacing: .08em; }
+  .groups { display: grid; grid-template-columns: repeat(3, minmax(7.5rem, auto)); gap: 2rem clamp(2rem, 5vw, 5rem); }
+  ul { margin: .75rem 0 0; padding: 0; list-style: none; }
+  .bottom .arrow-link { min-height: 2.75rem; padding-bottom: 0; background-position: 0 75%; }
+  li a { display: inline-flex; align-items: center; min-height: 2.75rem; color: var(--muted); }
+  li a:hover, li a:focus-visible { color: var(--text); }
+  .bottom { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding-block: 1rem; border-top: 1px solid var(--line); color: var(--faint); font: 500 .75rem var(--body); }
+  @media (max-width: 700px) { .top { flex-direction: column; } .groups { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 </style>

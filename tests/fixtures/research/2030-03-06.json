@@ -1,0 +1,99 @@
+{
+  "date": "2030-03-06",
+  "market": "open",
+  "registeredAt": "2030-03-06T08:35:00+09:00",
+  "corrections": [
+    {
+      "at": "2030-03-06T10:00:00+09:00",
+      "note": "[검증용] 종목명 표기를 정정했습니다."
+    }
+  ],
+  "source": {
+    "system": "QA-FIXTURE",
+    "runs": [
+      "QA-1"
+    ],
+    "origins": [
+      "QA-FIXTURE"
+    ]
+  },
+  "models": [
+    {
+      "model": "QA-모델-A",
+      "premarket": {
+        "status": "published",
+        "publishedAt": "2030-03-05T23:20:00+00:00",
+        "picks": [
+          {
+            "order": 1,
+            "ticker": "900006",
+            "name": "검증종목바",
+            "reasons": [
+              "[검증용] 검증종목바 선정 이유 예시 문장입니다."
+            ],
+            "risks": [
+              "[검증용] 검증종목바 위험 예시 문장입니다."
+            ],
+            "changeConditions": [
+              "[검증용] 검증종목바 판단 변경 조건 예시입니다."
+            ],
+            "score": 9
+          },
+          {
+            "order": 2,
+            "ticker": "900007",
+            "name": "검증종목사",
+            "reasons": [
+              "[검증용] 검증종목사 선정 이유 예시 문장입니다."
+            ],
+            "risks": [
+              "[검증용] 검증종목사 위험 예시 문장입니다."
+            ],
+            "changeConditions": [
+              "[검증용] 검증종목사 판단 변경 조건 예시입니다."
+            ],
+            "score": 11
+          },
+          {
+            "order": 3,
+            "ticker": "900008",
+            "name": "검증종목아",
+            "reasons": [
+              "[검증용] 검증종목아 선정 이유 예시 문장입니다."
+            ],
+            "risks": [
+              "[검증용] 검증종목아 위험 예시 문장입니다."
+            ],
+            "changeConditions": [
+              "[검증용] 검증종목아 판단 변경 조건 예시입니다."
+            ]
+          }
+        ]
+      },
+      "postmarket": {
+        "status": "reviewed",
+        "publishedAt": "2030-03-06T06:45:00+00:00",
+        "results": [
+          {
+            "ticker": "900006",
+            "name": "검증종목바",
+            "status": "confirmed",
+            "open": 3000,
+            "close": 2970,
+            "prevClose": 3010,
+            "basis": "검증용 가격"
+          },
+          {
+            "ticker": "900007",
+            "name": "검증종목사",
+            "status": "confirmed",
+            "open": 4000,
+            "close": 4100,
+            "prevClose": 3950,
+            "basis": "검증용 가격"
+          }
+        ]
+      }
+    }
+  ]
+}

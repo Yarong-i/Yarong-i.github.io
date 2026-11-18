@@ -8,10 +8,15 @@
   },
   "scripts": {
     "dev": "astro dev",
-    "build": "astro check && astro build",
+    "prebuild": "node scripts/clean-content-cache.mjs",
+    "build": "astro check && astro build && node scripts/check-dist.mjs",
+    "build:fixtures": "node scripts/build-fixtures.mjs",
+    "research:import": "node scripts/import-ask.mjs",
     "writing:new": "node scripts/new-writing.mjs",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "research:import-export": "node scripts/import-research-export.mjs",
+    "research:pull": "node scripts/pull-research-data.mjs"
   },
   "dependencies": {
     "astro": "7.0.6"

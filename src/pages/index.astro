@@ -1,36 +1,188 @@
 ---
 import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
-import HomeWritings from '../components/home/HomeWritings.astro';
-import HomeHero from '../components/home/HomeHero.astro';
-import HomeFeature from '../components/home/HomeFeature.astro';
-import { sortWritings } from '../utils/writingDates';
+import FeaturedProject from '../components/home/FeaturedProject.astro';
+import ResearchToday from '../components/ResearchToday.astro';
+import { getPerformance, getResearchDays } from '../utils/research';
+import { getFeed, FEED_LABEL, formatFeedDate } from '../utils/news';
+import { projectSummary, stageLabel } from '../utils/projects';
+
 const projects = await getCollection('projects');
-// Home projects and their order come from the `home` field in each project file.
-const homeProjects = projects.filter((p) => p.data.home !== undefined).sort((a, b) => (a.data.home ?? 0) - (b.data.home ?? 0));
-const writings = sortWritings(await getCollection('writings', ({ data }) => !data.draft));
+const featured = projects.filter((p) => p.data.featured !== undefined).sort((a, b) => a.data.featured! - b.data.featured!);
+const isResearch = (p: (typeof projects)[number]) => /연구|Finance/i.test(p.data.category ?? '');
+// "다른 프로젝트": ordered by `home`; research projects go to "지난 연구" instead.
+const others = projects.filter((p) => p.data.home !== undefined && p.data.featured === undefined && !isResearch(p))
+  .sort((a, b) => a.data.home! - b.data.home!);
+const pastResearch = projects.filter((p) => isResearch(p) && p.data.featured === undefined)
+  .sort((a, b) => (b.data.year ?? 0) - (a.data.year ?? 0));
+const researchDays = await getResearchDays();
+const performance = await getPerformance();
+const feed = await getFeed(5);
+const game = featured.find((p) => p.data.media);
+const bot = featured.find((p) => !p.data.media);
+// Secondary navigation for the feed: browse by topic.
+const topics: ReadonlyArray<readonly [string, string]> = [
+  ['/projects/junk-factory/', '게임'], ['/projects/discord-economy-bot/', '봇'], ['/research', '주식 연구'], ['/writings', '글'], ['/archive', '전체 기록'],
+];
 ---
-<BaseLayout>
-  <HomeHero />
+<BaseLayout title="YARONG — 게임, 봇, 주식 연구" description="Yarong이 만든 게임과 Discord 봇, 날마다 쌓는 주식 연구 기록, 바로 해 보는 반응속도 테스트.">
+  <div class="shell home">
+    <p class="intro">게임과 봇을 만들고, 주식을 연구하는 야롱입니다.</p>
 
-  {homeProjects.length > 0 && <HomeFeature projects={homeProjects} />}
+    <div class="bento">
+      {game && <div class="area-lead"><FeaturedProject project={game} /></div>}
 
-  <section class="section shell">
-    <div class="section-head" data-reveal><div><h2>최근 글</h2></div><a class="arrow-link" href="/writings">Read all</a></div>
-    <HomeWritings writings={writings.slice(0, 4)} />
+      <section class="area-play play" aria-labelledby="play-h">
+        <span class="signal" aria-hidden="true"></span>
+        <div class="play-text">
+          <h2 id="play-h">반응속도 테스트</h2>
+          <p>초록으로 바뀌는 순간 눌러 5번의 평균을 재 보세요.</p>
+        </div>
+        <a class="go play-link" href="/play/reaction">테스트하기 <span aria-hidden="true">→</span></a>
+      </section>
+
+      <section class="area-stock" aria-label="오늘의 주식 연구">
+        <ResearchToday day={researchDays[0]} performance={performance} />
+      </section>
+
+      {bot && <div class="area-bot"><FeaturedProject project={bot} /></div>}
+
+      <section class="area-news news" aria-labelledby="news-h">
+        <div class="news-head"><h2 id="news-h">최근 소식</h2></div>
+        {feed.length > 0 ? (
+          <ol class="feed">
+            {feed.map((item) => (
+              <li>
+                <time datetime={item.date.toISOString().slice(0, 10)}>{formatFeedDate(item.date)}</time>
+                <span class="kind" data-kind={item.kind}>{FEED_LABEL[item.kind]}</span>
+                {item.href ? <a href={item.href}>{item.title}</a> : <span>{item.title}</span>}
+              </li>
+            ))}
+          </ol>
+        ) : <p class="empty-note">날짜가 확인된 소식이 생기면 여기에 모입니다.</p>}
+        <nav class="topics" aria-label="주제별로 보기">
+          <span class="topics-label">주제별</span>
+          {topics.map(([href, label]) => <a href={href}>{label}</a>)}
+        </nav>
+      </section>
+    </div>
+  </div>
+
+  <section class="shell more" aria-label="다른 프로젝트와 지난 연구">
+    <div>
+      <div class="more-head"><h2>다른 프로젝트</h2><a class="go" href="/projects">전체 <span aria-hidden="true">→</span></a></div>
+      <ul class="plist">
+        {others.map((p) => (
+          <li><a href={`/projects/${p.id}/`}>
+            <strong>{p.data.title}</strong>
+            <span class="psum">{projectSummary(p)}</span>
+            {stageLabel(p) && <span class="pstage">{stageLabel(p)}</span>}
+          </a></li>
+        ))}
+      </ul>
+    </div>
+    <div>
+      <div class="more-head"><h2>지난 연구</h2><a class="go" href="/research">연구 기록 <span aria-hidden="true">→</span></a></div>
+      <ul class="plist research">
+        {pastResearch.map((p) => (
+          <li><a href={`/projects/${p.id}/`}>
+            <strong>{p.data.title}</strong>
+            <span class="psum">{p.data.result ?? projectSummary(p)}</span>
+            {stageLabel(p) && <span class="pstage">{stageLabel(p)}</span>}
+          </a></li>
+        ))}
+      </ul>
+    </div>
   </section>
 
-
-  <section class="section shell about-summary">
-    <p class="eyebrow" data-reveal>About</p>
-    <p data-reveal style="--i: 1">컴퓨터공학과 휴학생입니다. 개발과 주식 연구를 하고, 시를 씁니다.</p>
-    <a class="arrow-link" href="/about" data-reveal style="--i: 2">More about Yarong</a>
+  <section class="shell contact" aria-labelledby="contact-h">
+    <h2 id="contact-h">같이 만들거나, 물어볼 게 있다면</h2>
+    <div class="contact-actions">
+      <a class="btn btn-primary" href="/contact">문의하기 <span class="arrow" aria-hidden="true">→</span></a>
+      <a class="btn btn-ghost" href="/portfolio">포트폴리오</a>
+    </div>
   </section>
 </BaseLayout>
 <style>
-  /* Home sections sit closer together so the space links the scenes instead of separating them. */
-  .section { padding-block: clamp(3.5rem, 6vw, 6rem); }
-  .section-head h2 { font-family: var(--body); }
-  .about-summary { padding-bottom: 0; }
-  .about-summary > p:nth-child(2) { max-width: 1100px; margin: 2rem 0 3rem; font: 500 clamp(1.6rem, 3vw, 2.6rem)/1.35 var(--body); letter-spacing: -.03em; }
+  .home { padding-top: clamp(.75rem, 2vw, 1.25rem); }
+  .intro { margin: 0 0 clamp(.9rem, 1.6vw, 1.25rem); color: var(--muted); font: 500 .95rem/1.4 var(--body); }
+  .kicker { margin: 0; color: var(--muted); font: 700 .78rem var(--body); letter-spacing: .06em; }
+  .go { display: inline-flex; align-items: center; gap: .35rem; min-height: 2.75rem; font: 700 .92rem var(--body); }
+  .go span { transition: transform var(--base) var(--ease); }
+  .go:hover span, .go:focus-visible span { transform: translateX(4px); }
+
+  /* Left: things to play. Right: things to check. */
+  .bento { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: clamp(1.25rem, 2.6vw, 2.5rem); row-gap: clamp(1rem, 1.8vw, 1.5rem);
+    grid-template-areas:
+      'lead lead lead lead lead lead lead stock stock stock stock stock'
+      'lead lead lead lead lead lead lead bot bot bot bot bot'
+      'play play play play play play play news news news news news'; }
+  .area-lead { grid-area: lead; }
+  .area-play { grid-area: play; }
+  .area-stock { grid-area: stock; }
+  .area-bot { grid-area: bot; }
+  .area-news { grid-area: news; }
+
+  /* Mini-game entrance: a quiet row (a ruled line, a small signal dot, one line of text, one link), so it does
+     not compete with the featured game. The whole row is clickable through the link. */
+  .play { position: relative; align-self: start; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .4rem 1rem; padding: .9rem 0; border-block: 1px solid var(--line); }
+  .signal { width: .9rem; height: .9rem; border-radius: 50%; background: #B42318; box-shadow: 0 0 0 4px rgba(180, 35, 24, .18); transition: background-color 120ms linear, box-shadow 120ms linear; }
+  .play:hover .signal, .play:focus-within .signal { background: #12864A; box-shadow: 0 0 0 4px rgba(18, 134, 74, .22); }
+  .play-text { display: grid; gap: .1rem; min-width: 0; }
+  .play h2 { margin: 0; font: 800 1.15rem/1.2 var(--display); letter-spacing: -.02em; }
+  .play p { margin: 0; color: var(--muted); font-size: .9rem; line-height: 1.45; }
+  .play-link::after { content: ''; position: absolute; inset: 0; }
+  .play:hover .play-link span { transform: translateX(4px); }
+
+  /* News: a plain dated list with topic links as secondary navigation. */
+  .news { display: grid; align-content: start; gap: .5rem; }
+  .news-head h2 { margin: 0; font: 800 1.15rem var(--display); letter-spacing: -.02em; }
+  .feed { display: grid; margin: 0; padding: 0; list-style: none; }
+  .feed li { display: grid; grid-template-columns: 5.6rem 4.6rem minmax(0, 1fr); align-items: baseline; gap: .6rem; padding: .55rem 0; border-top: 1px solid var(--line); }
+  .feed li:last-child { border-bottom: 1px solid var(--line); }
+  .feed time { color: var(--faint); font: 500 .8rem var(--body); font-variant-numeric: tabular-nums; }
+  .kind { color: var(--muted); font: 700 .75rem var(--body); white-space: nowrap; }
+  .kind[data-kind='game'] { color: #F5C451; }
+  .kind[data-kind='bot'] { color: #A5ADFF; }
+  .kind[data-kind='research'] { color: #7BE3AF; }
+  .feed a { display: inline-block; padding-block: .4rem; margin-block: -.4rem; font-weight: 600; background: linear-gradient(currentColor, currentColor) 0 85% / 0 1px no-repeat; transition: background-size var(--base) var(--ease); }
+  .feed a:hover, .feed a:focus-visible { background-size: 100% 1px; }
+  .empty-note { margin: 0; color: var(--muted); }
+  .topics { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; }
+  .topics-label { margin-right: .3rem; color: var(--faint); font: 600 .75rem var(--body); }
+  .topics a { display: inline-flex; align-items: center; min-height: 2.25rem; padding: 0 .8rem; border-radius: 999px; background: rgba(255, 255, 255, .06); color: var(--muted); font: 600 .82rem var(--body); transition: background-color var(--fast), color var(--fast); }
+  .topics a:hover, .topics a:focus-visible { background: var(--text); color: var(--bg); }
+
+
+  .more { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(1.5rem, 4vw, 3.5rem); margin-top: clamp(2.5rem, 5vw, 4rem); }
+  .more-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: .25rem; }
+  .more-head h2 { margin: 0; font: 800 clamp(1.3rem, 2vw, 1.6rem)/1.1 var(--display); letter-spacing: -.03em; }
+  .plist { display: grid; margin: 0; padding: 0; list-style: none; border-bottom: 1px solid var(--line); }
+  .plist a { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .2rem 1rem; padding: .85rem .25rem; border-top: 1px solid var(--line); transition: background-color var(--fast), padding var(--base) var(--ease); }
+  .plist a:hover, .plist a:focus-visible { background: rgba(var(--light), .05); padding-inline: .75rem; }
+  .plist strong { font: 700 1.1rem var(--display); letter-spacing: -.02em; }
+  .psum { grid-column: 1 / -1; color: var(--muted); font-size: .92rem; line-height: 1.55; }
+  .pstage { grid-column: 2; grid-row: 1; color: var(--faint); font-size: .8rem; white-space: nowrap; }
+
+  .contact { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1.25rem; margin-top: clamp(3rem, 6vw, 5rem); padding-block: clamp(1.75rem, 3vw, 2.5rem); border-top: 1px solid var(--line); }
+  .contact h2 { margin: 0; font: 800 clamp(1.5rem, 3vw, 2.3rem)/1.15 var(--display); letter-spacing: -.04em; }
+  .contact-actions { display: flex; flex-wrap: wrap; gap: .6rem; }
+
+  /* Short laptop screens: give the image a little less width (never a crop) so the mini-game entrance stays in view. */
+  @media (min-width: 1024px) and (max-height: 820px) {
+    .bento { grid-template-areas:
+      'lead lead lead lead lead lead stock stock stock stock stock stock'
+      'lead lead lead lead lead lead bot bot bot bot bot bot'
+      'play play play play play play news news news news news news'; }
+  }
+  @media (max-width: 1023px) {
+    .bento { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-areas: 'lead lead' 'play play' 'stock bot' 'news news'; }
+    .more { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 680px) {
+    .bento { grid-template-columns: 1fr; grid-template-areas: 'lead' 'play' 'stock' 'bot' 'news'; }
+    .feed li { grid-template-columns: auto 1fr; gap: .2rem .6rem; }
+    .feed li > :last-child { grid-column: 1 / -1; }
+    .contact-actions, .contact-actions .btn { width: 100%; }
+  }
 </style>

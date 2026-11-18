@@ -45,10 +45,11 @@ img { display: block; max-width: 100%; }
 .skip-link { position: fixed; top: -5rem; left: 1rem; z-index: 100; background: var(--text); color: var(--bg); padding: .6rem 1rem; }
 .skip-link:focus { top: 1rem; }
 .shell { width: min(100%, calc(var(--max) + var(--gutter) * 2)); margin-inline: auto; padding-inline: var(--gutter); }
-.page { padding-top: clamp(9rem, 17vw, 14rem); min-height: 75vh; }
+.page { padding-top: clamp(2.5rem, 6vw, 5rem); min-height: 60vh; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .eyebrow { margin: 0; font: 500 clamp(.74rem, .7vw, .8rem)/1.4 var(--label); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 .display { margin: 1.5rem 0 0; max-width: 1050px; font: 700 clamp(3.4rem, 10vw, 9rem)/.9 var(--display); letter-spacing: -.055em; }
-.page-title { margin: 1.5rem 0 clamp(4rem, 10vw, 8rem); font: 700 clamp(3.5rem, 9vw, 8rem)/.92 var(--display); letter-spacing: -.055em; }
+.page-title { margin: 1rem 0 clamp(2.5rem, 6vw, 4.5rem); font: 800 clamp(2.6rem, 6.5vw, 5.5rem)/.95 var(--display); letter-spacing: -.05em; }
 .section { padding-block: clamp(5rem, 10vw, 10rem); }
 .section-head { display: flex; align-items: end; justify-content: space-between; gap: 2rem; padding-bottom: 1.3rem; border-bottom: 1px solid var(--line); }
 .section-head h2 { margin: 0; font: 700 clamp(2rem, 4vw, 3.6rem)/1.05 var(--display); letter-spacing: -.045em; }
@@ -68,6 +69,8 @@ img { display: block; max-width: 100%; }
 .btn .arrow { display: inline-block; transition: transform var(--base) var(--ease); }
 .btn:hover .arrow, .btn:focus-visible .arrow { transform: translateX(4px); }
 .btn-primary { background: var(--text); color: var(--bg); }
+.btn:active { transform: scale(.97); }
+.btn { transition: color var(--fast), border-color var(--fast), background-color var(--fast), transform 140ms var(--ease); }
 .btn-primary::before { background: linear-gradient(90deg, #fff, rgb(var(--light))); }
 .btn-ghost { border: 1px solid var(--line-strong); color: var(--text); }
 .btn-ghost::before { background: rgba(var(--light), .1); }

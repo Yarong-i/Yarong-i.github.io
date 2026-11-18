@@ -1,0 +1,163 @@
+---
+// Home's "오늘의 주식 연구": one trading day, one row group per model:
+//   모델명 | 추천 종목 | 점수 | 하루 수익률 | 누적 수익률
+// Picks: each model's final first choice when the source states ranks; otherwise every pick, whatever its score.
+// Returns: the same model's base first-choice mock strategy, copied from the research system's ledger.
+// A stock's open→close change is never put in their place. Models are never mixed across trading days.
+import type { Performance, ResearchDay } from '../utils/research';
+import {
+  PREMARKET_LABEL, displayName, formatStamp, homePicks, isoDay, latestPerformance, modelSlug, strategyCells,
+} from '../utils/research';
+interface Props { day?: ResearchDay; performance?: Performance[]; }
+const { day, performance = [] } = Astro.props;
+const iso = day ? isoDay(day.data.date) : undefined;
+const parts = day ? Object.fromEntries(new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' })
+  .formatToParts(day.data.date).map((p) => [p.type, p.value])) : {};
+const href = day ? `/research/${day.id}/` : '/research';
+const anyRanked = day?.data.models.some((m) => m.premarket.picks.some((p) => p.finalRank !== undefined || p.rank !== undefined));
+const strategies = day?.data.models.map((m) => m.strategy?.base).filter((s) => s !== undefined) ?? [];
+const startDate = strategies[0]?.startDate ?? performance.find((p) => p.data.startDate)?.data.startDate?.toISOString().slice(0, 10);
+const short = (d?: string) => (d ? d.slice(5).replace('-', '.') : undefined);
+---
+<div class="today" data-research-today data-date={iso}>
+  <div class="head">
+    <p class="label">오늘의 주식 연구 {day && <span class="recent" data-recent>최근 기록</span>}</p>
+    {day ? (
+      <p class="date"><span class="sr-only">추천 대상 거래일 </span><time datetime={iso}><span class="md">{parts.month}.{parts.day}</span><span class="dow">{parts.weekday}</span></time><span class="yr">추천 대상 거래일 · {parts.year}</span></p>
+    ) : (
+      <p class="date"><span class="md empty">기록 전</span></p>
+    )}
+  </div>
+
+  {!day && <p class="note">첫 연구일을 등록하면 거래일, 모델별 추천 종목과 점수, 모의 성과가 여기에 표시됩니다.</p>}
+  {day && day.data.market === 'closed' && <p class="state"><strong>휴장</strong> 이 거래일에는 추천이 없습니다.</p>}
+  {day && day.data.market === 'open' && day.data.models.length === 0 && <p class="state"><strong>발표 대기</strong> 아직 발표한 모델이 없습니다.</p>}
+
+  {day && day.data.market === 'open' && day.data.models.length > 0 && (
+    <>
+      <p class="perf-label"><strong>기본 1순위 전략 · 모의 성과</strong>{startDate && <span>누적 시작 {short(startDate)}</span>}<span>비용 전 · 실제 주문 아님</span></p>
+      <table class="picks">
+        <caption class="sr-only">{iso} 모델별 추천과 기본 1순위 전략 모의 성과</caption>
+        <thead><tr><th scope="col">모델</th><th scope="col">추천 종목</th><th scope="col" class="num">점수</th><th scope="col" class="num">하루</th><th scope="col" class="num">누적</th></tr></thead>
+        {day.data.models.map((run) => {
+          const picks = homePicks(run);
+          const rows = Math.max(picks.length, 1);
+          const link = `${href}#${modelSlug(run.model)}`;
+          const sent = formatStamp(run.premarket.publishedAt, false);
+          const cells = strategyCells(run, latestPerformance(performance, run.model));
+          const perfCells = [cells.day, cells.cum].map((c, i) => (
+            <td rowspan={rows} class:list={['num', 'perf', c.tone]} data-label={i === 0 ? '하루' : '누적'}>
+              <span class="v">{c.text}</span>{c.note && <small>{c.note}</small>}
+            </td>
+          ));
+          const modelCell = (
+            <th scope="rowgroup" rowspan={rows} class="model">
+              <span class="mname">{displayName(run, true)}</span>
+              {run.role === 'comparison' && <span class="role">비교</span>}
+              {sent && <small>발표 {sent}</small>}
+            </th>
+          );
+          return (
+            <tbody data-model={run.model}>
+              {picks.length > 0 ? picks.map((pick, i) => (
+                <tr>
+                  {i === 0 && modelCell}
+                  <td class="stock"><a href={link}><span class="name">{pick.name}</span><span class="ticker">{pick.ticker}</span></a></td>
+                  <td class="num score" data-label="점수">{pick.score !== undefined ? <>{pick.score}<small>점</small></> : <span class="muted">점수 없음</span>}</td>
+                  {i === 0 && perfCells}
+                </tr>
+              )) : (
+                <tr class="status-row" data-status={run.premarket.status}>
+                  {modelCell}
+                  <td class="stock" colspan="2"><a href={link}><strong>{PREMARKET_LABEL[run.premarket.status]}</strong></a></td>
+                  {perfCells}
+                </tr>
+              )}
+            </tbody>
+          );
+        })}
+      </table>
+      <p class="foot">
+        {anyRanked ? '모델별 최종 1순위만 보입니다. 전체 추천과 10점 필터 전략 비교는 상세 기록에 있습니다.' : '이날은 원본에 순위가 없어 모든 추천을 보여 줍니다.'}
+        {' '}점수는 연구 시스템의 선별 점수이며 10점 미만도 모두 공개합니다. 수익률은 종목 등락률이 아니라 기본 1순위 전략의 모의 성과입니다.
+      </p>
+    </>
+  )}
+  <p class="links">
+    <a class="go" href={href}>{day ? '이날 상세 기록' : '연구 페이지'} <span aria-hidden="true">→</span></a>
+    {day && <a class="go quiet" href="/research#records">날짜별 기록 <span aria-hidden="true">→</span></a>}
+  </p>
+</div>
+<script>
+  // The page is static, so whether the record is today's is decided in the browser (Asia/Seoul).
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date());
+  document.querySelectorAll<HTMLElement>('[data-research-today][data-date]').forEach((el) => {
+    if (el.dataset.date === today) el.querySelector('[data-recent]')?.remove();
+  });
+</script>
+<style>
+  .today { container-type: inline-size; display: grid; align-content: start; gap: .7rem; padding-top: .9rem; border-top: 2px solid var(--text); }
+  .label { display: flex; align-items: center; gap: .5rem; margin: 0; color: var(--muted); font: 700 .8rem var(--body); letter-spacing: .06em; }
+  .recent { padding: .1rem .5rem; border: 1px solid #E3A008; border-radius: 999px; color: #F5C451; font: 700 .72rem var(--body); letter-spacing: 0; }
+  .date { display: flex; align-items: baseline; flex-wrap: wrap; gap: .2rem .6rem; margin: 0; }
+  .md { font: 800 clamp(2.4rem, 4.2vw, 3.3rem)/.95 var(--display); letter-spacing: -.05em; font-variant-numeric: tabular-nums; }
+  .md.empty { color: var(--line-strong); }
+  .dow { margin-left: .45rem; font: 700 1.15rem var(--display); }
+  .yr { margin-left: auto; color: var(--faint); font: 500 .8rem var(--body); }
+  .note, .foot { margin: 0; color: var(--muted); font-size: .88rem; line-height: 1.55; }
+  .foot { color: var(--faint); font-size: .78rem; }
+  .state { display: flex; flex-wrap: wrap; gap: .5rem; margin: 0; padding: .7rem 0; border-block: 1px solid var(--line); color: var(--muted); }
+  .state strong { color: var(--text); }
+  .perf-label { display: flex; flex-wrap: wrap; gap: .2rem .8rem; margin: 0; color: var(--faint); font-size: .78rem; }
+  .perf-label strong { color: var(--text); font: 700 .82rem var(--body); }
+
+  .picks { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  thead th { padding: 0 0 .35rem; color: var(--faint); font: 600 .74rem var(--body); text-align: left; border-bottom: 1px solid var(--line-strong); }
+  thead th.num { padding-left: .75rem; text-align: right; }
+  tbody { border-bottom: 1px solid var(--line); }
+  th, td { padding: .55rem 0; vertical-align: top; }
+  .num { padding-left: .75rem; text-align: right; white-space: nowrap; }
+  .model { width: 6.5rem; padding-right: .75rem; text-align: left; }
+  .mname { font: 700 .9rem/1.25 var(--body); overflow-wrap: anywhere; }
+  .role { display: inline-block; margin-left: .3rem; vertical-align: .1em; padding: 0 .35rem; border: 1px solid var(--line-strong); border-radius: 4px; color: var(--muted); font: 600 .68rem var(--body); }
+  .model small { display: block; margin-top: .15rem; color: var(--faint); font: 500 .74rem var(--body); }
+  .stock a { display: inline-flex; flex-direction: column; gap: .05rem; }
+  .stock a:hover .name, .stock a:focus-visible .name { text-decoration: underline; text-underline-offset: 3px; }
+  .name { font: 700 1.05rem/1.25 var(--display); letter-spacing: -.02em; }
+  .ticker { color: var(--faint); font: 500 .74rem var(--body); }
+  .score { font: 800 1.25rem/1.1 var(--display); }
+  .score small { margin-left: .1rem; color: var(--muted); font: 500 .72rem var(--body); }
+  .muted { color: var(--faint); font: 500 .78rem var(--body); }
+  .perf .v { display: block; font: 700 .98rem/1.25 var(--body); }
+  .perf small { display: block; color: var(--faint); font: 500 .7rem var(--body); }
+  .perf.up .v { color: #FF7A6E; }
+  .perf.down .v { color: #7FA6FF; }
+  .perf.none .v { color: var(--muted); font-weight: 600; font-size: .85rem; }
+  .status-row strong { font: 700 .95rem var(--body); }
+  .status-row[data-status='failed'] strong { color: #FF7A6E; }
+  .status-row[data-status='pending'] strong { color: #F5C451; }
+  .status-row[data-status='no-picks'] strong { color: var(--muted); }
+
+  /* Narrow: the model becomes the group title; stock · score on one line, 하루 · 누적 on the next. */
+  @container (max-width: 30rem) {
+    .picks thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+    .picks tbody, .picks tr { display: grid; }
+    .picks tr { grid-template-columns: minmax(0, 1fr) auto; column-gap: 1rem; padding-bottom: .55rem; }
+    .picks th, .picks td { padding: 0; }
+    .model { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: baseline; gap: .1rem .5rem; width: auto; padding: .65rem 0 .35rem !important; }
+    .model small { display: inline; margin: 0; }
+    .stock { padding-top: .1rem !important; }
+    .stock a { flex-direction: row; align-items: baseline; flex-wrap: wrap; column-gap: .45rem; }
+    .score { align-self: center; }
+    .perf { display: flex; align-items: baseline; gap: .4rem; justify-content: flex-start; margin-top: .35rem; text-align: left; }
+    .perf::before { content: attr(data-label); color: var(--faint); font: 600 .74rem var(--body); }
+    .perf small { display: inline; }
+    .perf + .perf { justify-content: flex-end; }
+    .status-row .stock { grid-column: 1 / -1; }
+  }
+  .links { display: flex; flex-wrap: wrap; gap: .25rem 1.25rem; margin: 0; }
+  .go { display: inline-flex; align-items: center; gap: .35rem; min-height: 2.75rem; font: 700 .92rem var(--body); }
+  .go span { transition: transform var(--base) var(--ease); }
+  .go:hover span, .go:focus-visible span { transform: translateX(4px); }
+  .go.quiet { color: var(--muted); }
+</style>

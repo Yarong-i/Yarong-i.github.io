@@ -1,0 +1,154 @@
+---
+// A featured project on Home, in one of two forms:
+// - with `media` (a game): the real image large, a screenshot strip that swaps into the main view, then a short
+//   caption and the play action directly on the page, without a surrounding card;
+// - without media (the bot): its main features as large words, and a reserved frame for a real usage screen.
+//   The frame stays empty with a label until a real screenshot exists; it never shows a mock-up.
+import type { CollectionEntry } from 'astro:content';
+import { projectSummary, stageLabel } from '../../utils/projects';
+interface Props { project: CollectionEntry<'projects'>; }
+const { project } = Astro.props;
+const { title, alias, media, playUrl, playLabel, description, stage, technologies } = project.data;
+const href = `/projects/${project.id}/`;
+const stageText = stageLabel(project);
+// Features come from the existing one-line description ("출석, 경제, 주식 게임, 예측, 상점 기능을 가진 …").
+const features = !media && description?.includes(',')
+  ? description.replace(/\s*기능을.*$/, '').split(',').map((s) => s.trim()).filter(Boolean)
+  : [];
+---
+{media ? (
+  <article class="game" data-feature>
+    <div class="visual">
+      {media.video ? (
+        <video class="main" src={media.video} poster={media.poster} muted loop playsinline preload="none" aria-label={media.alt} data-feature-video></video>
+      ) : (
+        <img class="main" src={media.poster} alt={media.alt} width="1400" height="788" loading="eager" decoding="async" data-feature-main />
+      )}
+      {media.gallery.length > 0 && (
+        <ul class="thumbs" aria-label={`${title} 화면 고르기`}>
+          <li><button type="button" aria-pressed="true" data-src={media.poster} data-alt={media.alt}><img src={media.poster} alt="" loading="lazy" /><span class="sr-only">대표 이미지</span></button></li>
+          {media.gallery.map((g, i) => (
+            <li><button type="button" aria-pressed="false" data-src={g.src} data-alt={g.alt}><img src={g.src} alt="" loading="lazy" /><span class="sr-only">화면 {i + 1}: {g.alt}</span></button></li>
+          ))}
+        </ul>
+      )}
+    </div>
+    <div class="caption">
+      <div class="text">
+        <p class="meta">{stageText && <span class="stage" data-stage={stage}>{stageText}</span>}{technologies.length > 0 && <span>{technologies.join(' · ')}</span>}</p>
+        <h3><a href={href}>{title}</a>{alias && <small>{alias}</small>}</h3>
+        <p class="summary">{projectSummary(project)}</p>
+      </div>
+      <div class="actions">
+        {playUrl
+          ? <a class="btn btn-primary play" href={playUrl} rel="noopener" target="_blank"><span class="tri" aria-hidden="true"></span>{playLabel ?? '플레이'}</a>
+          : <span class="play-soon" title="공개 링크가 생기면 바로 플레이할 수 있습니다"><span class="tri" aria-hidden="true"></span>공개 준비 중</span>}
+        <a class="btn btn-ghost" href={href}>개발 기록 <span class="arrow" aria-hidden="true">→</span></a>
+      </div>
+    </div>
+  </article>
+) : (
+  <article class="bot">
+    <div class="bot-head">
+      <p class="meta">{stageText && <span class="stage" data-stage={stage}>{stageText}</span>}<span>Discord</span></p>
+      <h3><a href={href}>{title}</a></h3>
+      <p class="summary">{projectSummary(project)}</p>
+    </div>
+    <div class="bot-body">
+      <div class="bot-main">
+        {features.length > 0 && (
+          <ul class="features" aria-label="대표 기능">{features.map((f, i) => <li style={`--i: ${i}`}>{f}</li>)}</ul>
+        )}
+        <a class="go" href={href}>기능과 기록 보기 <span aria-hidden="true">→</span></a>
+      </div>
+      <figure class="shot-slot">
+        <figcaption>실제 사용 화면 준비 중</figcaption>
+      </figure>
+    </div>
+  </article>
+)}
+<script>
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+  document.querySelectorAll<HTMLElement>('[data-feature]').forEach((card) => {
+    // Screenshot strip: hovering (mouse) or tapping a thumbnail shows it in the main view.
+    const main = card.querySelector<HTMLImageElement>('[data-feature-main]');
+    const buttons = card.querySelectorAll<HTMLButtonElement>('.thumbs button');
+    const show = (button: HTMLButtonElement) => {
+      if (!main || button.getAttribute('aria-pressed') === 'true') return;
+      buttons.forEach((b) => b.setAttribute('aria-pressed', String(b === button)));
+      main.classList.add('swap');
+      window.setTimeout(() => { main.src = button.dataset.src!; main.alt = button.dataset.alt!; main.classList.remove('swap'); }, reduced.matches ? 0 : 140);
+    };
+    buttons.forEach((b) => {
+      b.addEventListener('click', () => show(b));
+      b.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') show(b); });
+    });
+
+    // Short clip: plays while hovered (mouse) or while on screen (touch). Never plays under reduced motion.
+    const video = card.querySelector<HTMLVideoElement>('[data-feature-video]');
+    if (!video || reduced.matches) return;
+    const play = () => { video.play().catch(() => {}); };
+    const pause = () => video.pause();
+    if (window.matchMedia('(hover: hover)').matches) {
+      card.addEventListener('pointerenter', play);
+      card.addEventListener('pointerleave', pause);
+      card.addEventListener('focusin', play);
+      card.addEventListener('focusout', pause);
+    } else {
+      new IntersectionObserver(([e]) => (e?.isIntersecting ? play() : pause()), { threshold: .6 }).observe(video);
+    }
+  });
+</script>
+<style>
+  .meta { display: flex; flex-wrap: wrap; gap: .3rem .9rem; margin: 0; text-transform: none; letter-spacing: .02em; }
+  .stage { color: var(--text); }
+  .stage::before { content: ''; display: inline-block; width: .45rem; height: .45rem; margin-right: .4rem; border-radius: 50%; background: var(--muted); vertical-align: .1em; }
+  .stage[data-stage='in-use']::before { background: #3FD18A; }
+  .stage[data-stage='active']::before { background: var(--progress); }
+  .summary { margin: 0; color: var(--muted); line-height: 1.55; }
+
+  /* Game: the image carries the colour; the caption sits on the page itself. */
+  .game { position: relative; display: grid; gap: 1rem; }
+  .visual { position: relative; overflow: hidden; border-radius: 18px; background: #000; }
+  .main { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; transition: transform 700ms var(--ease), opacity 140ms linear; }
+  .main.swap { opacity: 0; }
+  @media (prefers-reduced-motion: no-preference) { .game:has(.visual:hover) .main { transform: scale(1.03); } }
+  .thumbs { position: absolute; left: .75rem; bottom: .75rem; z-index: 1; display: flex; gap: .4rem; margin: 0; padding: .35rem; list-style: none; border-radius: 14px; background: rgba(9, 10, 13, .62); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+  .thumbs button { display: block; width: 3.4rem; height: 2.6rem; padding: 0; overflow: hidden; border: 2px solid transparent; border-radius: 9px; background: #000; cursor: pointer; opacity: .72; transition: opacity var(--fast), border-color var(--fast), transform var(--fast) var(--ease); }
+  .thumbs button:hover, .thumbs button:focus-visible { opacity: 1; transform: translateY(-2px); }
+  .thumbs button[aria-pressed='true'] { border-color: #fff; opacity: 1; }
+  .thumbs img { width: 100%; height: 100%; object-fit: cover; }
+  .caption { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: .9rem 2rem; }
+  .text { display: grid; gap: .35rem; flex: 1 1 20rem; min-width: 0; }
+  .game h3 { white-space: nowrap; margin: 0; font: 800 clamp(2rem, 3.6vw, 3rem)/1 var(--display); letter-spacing: -.045em; }
+  .game h3 small { margin-left: .6rem; color: var(--faint); font: 500 .85rem var(--body); letter-spacing: 0; white-space: nowrap; }
+  .actions { display: flex; flex-wrap: wrap; gap: .5rem; flex: 0 0 auto; }
+  .actions .btn { min-height: 3rem; }
+  .tri { width: 0; height: 0; border-block: .38em solid transparent; border-left: .62em solid currentColor; }
+  .play { gap: .55rem; }
+  .play-soon { display: inline-flex; align-items: center; gap: .55rem; min-height: 3rem; padding: 0 1.2rem; border: 1px dashed var(--line-strong); border-radius: 999px; color: var(--muted); font: 600 .9rem var(--body); cursor: default; }
+
+  /* Bot: features as large words + a reserved frame for a real screenshot. A faint panel sets it apart. */
+  .bot { display: grid; align-content: start; gap: .9rem; padding: clamp(1.1rem, 2vw, 1.4rem); border-radius: 18px; background: #12141A; border-left: 3px solid #5865F2; }
+  .bot-head { display: grid; gap: .3rem; }
+  .bot h3 { margin: 0; font: 800 clamp(1.6rem, 2.6vw, 2.1rem)/1.05 var(--display); letter-spacing: -.04em; }
+  .bot h3 a::after { content: ''; position: absolute; inset: 0; }
+  .bot { position: relative; }
+  .bot-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(7rem, .8fr); gap: 1rem; align-items: stretch; }
+  .features { display: flex; flex-wrap: wrap; align-content: start; gap: .15rem 1.1rem; margin: 0; padding: 0; list-style: none; }
+  .features li { font: 800 clamp(1.05rem, 1.6vw, 1.3rem)/1.35 var(--display); letter-spacing: -.02em; transition: color var(--fast), transform var(--base) var(--ease); }
+  .bot:hover .features li { color: #C9CDFF; }
+  .bot-main { display: grid; align-content: space-between; gap: .5rem; }
+  .shot-slot { display: grid; align-content: center; justify-items: center; gap: .5rem; min-height: 5.5rem; margin: 0; border: 1px dashed var(--line-strong); border-radius: 12px; color: var(--faint); font-size: .78rem; text-align: center; }
+  .go { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: .35rem; justify-self: start; min-height: 2.75rem; font: 700 .92rem var(--body); }
+  .go span { transition: transform var(--base) var(--ease); }
+  .bot:hover .go span, .go:focus-visible span { transform: translateX(4px); }
+
+  @media (max-width: 680px) {
+    .caption { flex-direction: column; align-items: stretch; }
+    .text { flex: none; }
+    .actions > * { flex: 1 1 0; justify-content: center; }
+    .thumbs { left: .5rem; bottom: .5rem; }
+    .thumbs button { width: 2.9rem; height: 2.75rem; }
+  }
+</style>

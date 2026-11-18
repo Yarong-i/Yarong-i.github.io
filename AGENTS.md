@@ -5,8 +5,11 @@
 - Do not rewrite existing writing/project prose unless the user explicitly asks. Keep UTF-8 and do not “repair” Korean text based only on mojibake shown by a terminal.
 - Never use `git add .` or `git clean`. Stage only explicitly reviewed paths. Never push unless the user explicitly requests it.
 - Never commit `.env*`, credentials, tokens, account/bank data, server details, `node_modules/`, `dist/`, `.astro/`, logs, ZIP/PDF artifacts, screenshots, or generated images.
-- Keep the "black and light" theme: use the tokens in `src/styles/global.css` (deep black, white and grey type, a white light with a faint blue tint shown only as soft glow); no accent colours, primary buttons are white with black text; status colours always come with a text label. No glow, purple, excessive gradients, rounded-card repetition, decorative particles, heavy shadows, continuously moving backgrounds, fake live data, or global custom cursors.
+- Keep the "black and light" theme for UI chrome (real game/product images keep their own colours; the reaction test uses red/green signal colours with text labels): use the tokens in `src/styles/global.css` (deep black, white and grey type, a white light with a faint blue tint shown only as soft glow); no accent colours, primary buttons are white with black text; status colours always come with a text label. No glow, purple, excessive gradients, rounded-card repetition, decorative particles, heavy shadows, continuously moving backgrounds, fake live data, or global custom cursors.
 - Draft content is not secret: `draft: true` removes it from the built site, but a committed draft remains readable in the public repository.
 - Project pages are generated for every project, including `private: true`; that flag is a label, not an access control.
 - Before handoff run, with Node 22: `npm run astro check`, `npm run build`, and `git diff --check`. Also review `git diff` and `git status --short`.
 - Do not commit or push unless the user explicitly asks.
+- Never invent stock picks, scores, returns, update dates or user counts. Research records live on the `research-data` branch (written by the research server's export and the deploy workflow), not on main; `npm run research:pull` copies them locally. See `docs/adding-research.md` and `docs/research-auto-publish.md`.
+- Never commit server-side publish files, server addresses or internal paths (`deploy/` is ignored).
+- `media` images must be real screenshots or official key art of the project, never mock-ups.

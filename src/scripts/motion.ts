@@ -5,7 +5,7 @@ const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
 let pending: { el: HTMLElement; x: string; y: string } | null = null;
 document.addEventListener('pointermove', (event) => {
   if (event.pointerType !== 'mouse') return;
-  const el = (event.target as Element | null)?.closest<HTMLElement>('.lit, .writing-item, .wrow');
+  const el = (event.target as Element | null)?.closest<HTMLElement>('.lit, .writing-item');
   if (!el) return;
   const rect = el.getBoundingClientRect();
   const first = !pending;

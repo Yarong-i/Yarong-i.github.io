@@ -1,32 +1,31 @@
 ---
 const path = Astro.url.pathname;
-const links: ReadonlyArray<readonly [string, string]> = [['/projects', 'Projects'], ['/writings', 'Writings'], ['/archive', 'Archive'], ['/about', 'About']];
+const links: ReadonlyArray<readonly [string, string]> = [['/projects', '프로젝트'], ['/research', '주식 연구'], ['/play', '미니게임'], ['/contact', '문의']];
+const isCurrent = (href: string) => path === href || path.startsWith(`${href}/`);
 ---
 <header class="header" data-header>
   <div class="shell inner">
     <a class="logo" href="/" aria-label="YARONG 홈">YARONG</a>
-    <button class="menu-button" type="button" aria-expanded="false" aria-controls="site-nav"><span>Menu</span><span class="menu-icon" aria-hidden="true"></span></button>
-  </div>
-  <nav id="site-nav" class="site-nav" aria-label="주요 메뉴">
-    <div class="shell nav-list">
-      {links.map(([href, label], i) => (
-        <a href={href} style={`--i: ${i}`} aria-current={path.startsWith(href) ? 'page' : undefined}>
-          <span class="nav-index" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
-          <span class="nav-label">{label}</span>
-          <span class="nav-arrow" aria-hidden="true">→</span>
-        </a>
-      ))}
+    <nav id="site-nav" class="site-nav" aria-label="주요 메뉴">
+      <ul>
+        {links.map(([href, label], i) => (
+          <li style={`--i: ${i}`}><a href={href} aria-current={isCurrent(href) ? 'page' : undefined}>{label}</a></li>
+        ))}
+      </ul>
+    </nav>
+    <div class="end">
+      <a class="portfolio" href="/portfolio" aria-current={isCurrent('/portfolio') ? 'page' : undefined}>포트폴리오</a>
+      <button class="menu-button" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="메뉴 열기"><span class="menu-icon" aria-hidden="true"></span></button>
     </div>
-  </nav>
+  </div>
 </header>
 <script>
-  // Without JavaScript the links stay inline in the header; with it they live in the menu panel.
+  // Wide screens show the links inline. On narrow screens they fold into a panel under the bar.
   const header = document.querySelector<HTMLElement>('[data-header]');
   const button = header?.querySelector<HTMLButtonElement>('.menu-button');
-  const nav = header?.querySelector<HTMLElement>('#site-nav');
   const setOpen = (open: boolean) => {
     button?.setAttribute('aria-expanded', String(open));
-    nav?.classList.toggle('is-open', open);
+    button?.setAttribute('aria-label', open ? '메뉴 닫기' : '메뉴 열기');
     header?.classList.toggle('menu-open', open);
   };
   const isOpen = () => button?.getAttribute('aria-expanded') === 'true';
@@ -39,64 +38,48 @@ const links: ReadonlyArray<readonly [string, string]> = [['/projects', 'Projects
   document.addEventListener('click', (event) => {
     if (isOpen() && header && !header.contains(event.target as Node)) setOpen(false);
   });
-  // A quiet background appears once the page has scrolled, so the thin bar stays legible over content.
+  window.matchMedia('(min-width: 761px)').addEventListener('change', (event) => { if (event.matches) setOpen(false); });
   let ticking = false;
-  const updateScrolled = () => { ticking = false; header?.classList.toggle('is-scrolled', window.scrollY > 8); };
+  const updateScrolled = () => { ticking = false; header?.classList.toggle('is-scrolled', window.scrollY > 4); };
   window.addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(updateScrolled); } }, { passive: true });
   updateScrolled();
 </script>
 <style>
-  .header { position: absolute; inset: 0 0 auto; z-index: 50; }
-  .inner { position: relative; display: flex; justify-content: space-between; align-items: center; gap: 1rem; min-height: 4rem; }
-  .logo { flex: 0 0 auto; font: 700 .95rem var(--display); letter-spacing: .14em; }
+  .header { position: sticky; top: 0; z-index: 50; background: rgba(9, 10, 13, .82); border-bottom: 1px solid transparent; -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); transition: border-color var(--base) var(--ease); }
+  .header.is-scrolled, .header.menu-open { border-bottom-color: var(--line); }
+  .inner { display: flex; align-items: center; gap: clamp(1rem, 3vw, 2.5rem); min-height: 3.75rem; }
+  .logo { flex: 0 0 auto; display: inline-flex; align-items: center; min-height: 2.75rem; font: 800 1rem var(--display); letter-spacing: .12em; }
+  .site-nav ul { display: flex; gap: .25rem; margin: 0; padding: 0; list-style: none; }
+  .site-nav a { display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0 .85rem; border-radius: 999px; color: var(--muted); font: 600 .92rem var(--body); transition: color var(--fast), background-color var(--fast); }
+  .site-nav a:hover, .site-nav a:focus-visible { color: var(--text); background: rgba(var(--light), .07); }
+  .site-nav a[aria-current='page'] { color: var(--text); background: rgba(var(--light), .1); }
+  .end { display: flex; align-items: center; gap: .5rem; margin-left: auto; }
+  .portfolio { display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0 1.15rem; border-radius: 999px; background: var(--text); color: var(--bg); font: 700 .9rem var(--body); transition: transform var(--fast) var(--ease), background-color var(--fast); }
+  .portfolio:hover, .portfolio:focus-visible { background: #fff; }
+  .portfolio:active { transform: scale(.96); }
   .menu-button { display: none; }
 
-  /* No JavaScript: plain inline links under or beside the logo. */
-  .site-nav .nav-list { display: flex; flex-wrap: wrap; gap: .25rem 1.75rem; padding-bottom: .75rem; }
-  .site-nav a { display: inline-flex; align-items: center; min-height: 2.5rem; color: var(--muted); font: 500 .85rem var(--body); }
-  .site-nav a[aria-current='page'] { color: var(--text); }
-  .nav-index, .nav-arrow { display: none; }
+  @media (max-width: 760px) {
+    :global(.js) .menu-button { display: inline-grid; place-items: center; width: 2.75rem; height: 2.75rem; border: 1px solid var(--line-strong); border-radius: 999px; background: transparent; cursor: pointer; }
+    .menu-icon { position: relative; width: 1rem; height: .6rem; }
+    .menu-icon::before, .menu-icon::after { content: ''; position: absolute; left: 0; right: 0; height: 1.5px; background: currentColor; transition: transform var(--base) var(--ease), top var(--base) var(--ease); }
+    .menu-icon::before { top: 0; }
+    .menu-icon::after { top: calc(100% - 1.5px); }
+    .menu-button[aria-expanded='true'] .menu-icon::before { top: calc(50% - .75px); transform: rotate(45deg); }
+    .menu-button[aria-expanded='true'] .menu-icon::after { top: calc(50% - .75px); transform: rotate(-45deg); }
 
-  /* With JavaScript: a thin fixed bar with a Menu button and a full-width panel. */
-  :global(.js) .header { position: fixed; transition: background-color var(--base) var(--ease), border-color var(--base) var(--ease); border-bottom: 1px solid transparent; }
-  :global(.js) .header.is-scrolled:not(.menu-open) { background: rgba(9, 10, 13, .72); border-bottom-color: var(--line); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
-  :global(.js) .menu-button { display: inline-flex; align-items: center; gap: .75rem; min-height: 2.5rem; padding: 0 1rem; border: 1px solid var(--line-strong); border-radius: 999px; background: transparent; cursor: pointer; font: 600 .85rem var(--body); transition: border-color var(--fast), background-color var(--fast); }
-  :global(.js) .menu-button:hover { border-color: var(--muted); background: rgba(var(--light), .08); }
-  .menu-icon { position: relative; width: .9rem; height: .55rem; }
-  .menu-icon::before, .menu-icon::after { content: ''; position: absolute; left: 0; right: 0; height: 1.5px; background: currentColor; transition: transform var(--base) var(--ease), top var(--base) var(--ease); }
-  .menu-icon::before { top: 0; }
-  .menu-icon::after { top: calc(100% - 1.5px); }
-  .menu-button[aria-expanded='true'] .menu-icon::before { top: calc(50% - .75px); transform: rotate(45deg); }
-  .menu-button[aria-expanded='true'] .menu-icon::after { top: calc(50% - .75px); transform: rotate(-45deg); }
-
-  /* Panel: unfolds from the top; items rise in one after another. Closing runs the same path backwards:
-     items leave first (reverse order), then the panel folds up. Hidden panels are not focusable. */
-  :global(.js) .site-nav { position: fixed; inset: 0 0 auto; z-index: -1; pointer-events: auto; padding: 6rem 0 clamp(2.5rem, 6vh, 4rem); background:
-      radial-gradient(ellipse 70% 70% at 50% 130%, rgba(var(--light), .2), transparent 70%), var(--bg);
-    border-bottom: 1px solid var(--line); clip-path: inset(0 0 100% 0); visibility: hidden;
-    transition: clip-path 560ms var(--ease) 200ms, visibility 0s linear 760ms; }
-  :global(.js) .site-nav.is-open { clip-path: inset(0 0 0 0); visibility: visible; transition: clip-path 640ms var(--ease), visibility 0s; }
-  :global(.js) .site-nav .nav-list { display: grid; justify-content: stretch; align-items: stretch; gap: 0; min-height: 0; padding-block: 0; }
-  :global(.js) .site-nav a { display: grid; grid-template-columns: 3rem minmax(0, 1fr) auto; align-items: baseline; gap: 1rem; min-height: 0; padding: .35rem 0; border-top: 1px solid var(--line); color: var(--muted);
-    font: 700 clamp(2.2rem, 6vw, 4.6rem)/1.15 var(--display); letter-spacing: -.045em;
-    opacity: 0; transform: translateY(45%);
-    transition: opacity 240ms var(--ease) calc((3 - var(--i)) * 45ms), transform 300ms var(--ease) calc((3 - var(--i)) * 45ms), color var(--fast); }
-  :global(.js) .site-nav.is-open a { opacity: 1; transform: none;
-    transition: opacity 600ms var(--ease) calc(180ms + var(--i) * 70ms), transform 760ms var(--ease) calc(180ms + var(--i) * 70ms), color var(--fast); }
-  :global(.js) .site-nav a:hover, :global(.js) .site-nav a:focus-visible, :global(.js) .site-nav a[aria-current='page'] { color: var(--text); }
-  :global(.js) .nav-index { display: inline; color: var(--faint); font: 500 .8rem var(--body); letter-spacing: .06em; }
-  :global(.js) .nav-label { background: linear-gradient(currentColor, currentColor) 0 92% / 0 2px no-repeat; transition: background-size var(--base) var(--ease); }
-  :global(.js) .site-nav a:hover .nav-label, :global(.js) .site-nav a:focus-visible .nav-label { background-size: 100% 2px; }
-  :global(.js) .nav-arrow { display: inline; font-size: .5em; opacity: 0; transform: translateX(-12px); transition: opacity var(--base) var(--ease), transform var(--base) var(--ease); }
-  :global(.js) .site-nav a:hover .nav-arrow, :global(.js) .site-nav a:focus-visible .nav-arrow { opacity: 1; transform: none; }
-
-  @media (min-width: 641px) {
-    .site-nav { position: absolute; inset: 0 0 auto; pointer-events: none; }
-    .site-nav .nav-list { justify-content: flex-end; align-items: center; min-height: 4rem; padding-bottom: 0; }
-    .site-nav a { pointer-events: auto; }
-  }
-  @media (max-width: 640px) {
-    /* Without JavaScript the wrapped links push the page down instead of overlaying it. */
-    :global(html:not(.js)) .header { position: relative; }
+    /* Without JavaScript the links wrap under the logo. */
+    .inner { flex-wrap: wrap; }
+    .site-nav { order: 3; width: 100%; }
+    .site-nav ul { flex-wrap: wrap; padding-bottom: .5rem; }
+    /* With JavaScript the links live in a panel that drops below the bar. */
+    :global(.js) .site-nav { position: absolute; inset: 100% 0 auto; width: auto; padding: .5rem var(--gutter) 1.25rem; background: var(--bg); border-bottom: 1px solid var(--line); clip-path: inset(0 0 100% 0); visibility: hidden; transition: clip-path 420ms var(--ease), visibility 0s linear 420ms; }
+    :global(.js) .header.menu-open .site-nav { clip-path: inset(0 0 0 0); visibility: visible; transition: clip-path 480ms var(--ease), visibility 0s; }
+    :global(.js) .site-nav ul { display: grid; gap: 0; padding: 0; }
+    :global(.js) .site-nav li { border-top: 1px solid var(--line); opacity: 0; transform: translateY(8px); transition: opacity 200ms var(--ease), transform 200ms var(--ease); }
+    :global(.js) .header.menu-open .site-nav li { opacity: 1; transform: none; transition: opacity 420ms var(--ease) calc(80ms + var(--i) * 50ms), transform 420ms var(--ease) calc(80ms + var(--i) * 50ms); }
+    :global(.js) .site-nav a { display: flex; min-height: 3.5rem; padding: 0; border-radius: 0; font: 700 1.5rem var(--display); letter-spacing: -.03em; background: none; }
+    :global(.js) .site-nav a[aria-current='page'] { background: none; }
+    :global(.js) .site-nav a[aria-current='page']::after { content: '현재'; margin-left: auto; color: var(--faint); font: 500 .75rem var(--body); }
   }
 </style>

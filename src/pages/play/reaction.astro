@@ -1,0 +1,18 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ReactionTest from '../../components/ReactionTest.astro';
+---
+<BaseLayout title="반응속도 테스트 — YARONG" description="빨간 화면이 초록색으로 바뀌는 순간 누르세요. 5번 재서 평균과 최고 기록을 보여 줍니다.">
+  <div class="page shell narrow">
+    <a class="arrow-link back" href="/play">미니게임</a>
+    <h1 class="title">반응속도 테스트</h1>
+    <p class="lead">빨간 화면에서 기다리다가 초록색이 되면 바로 누르세요. 5번 재면 평균과 최고 기록이 나옵니다.</p>
+    <ReactionTest />
+  </div>
+</BaseLayout>
+<style>
+  .narrow { max-width: 56rem; }
+  .back { margin-bottom: 1rem; }
+  .title { margin: 0 0 .5rem; font: 800 clamp(2.2rem, 5vw, 3.6rem)/1 var(--display); letter-spacing: -.045em; }
+  .lead { margin: 0 0 1.5rem; color: var(--muted); }
+</style>

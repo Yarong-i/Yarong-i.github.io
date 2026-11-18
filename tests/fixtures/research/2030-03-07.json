@@ -1,0 +1,16 @@
+{
+  "date": "2030-03-07",
+  "market": "closed",
+  "registeredAt": "2030-03-07T09:00:00+09:00",
+  "corrections": [],
+  "source": {
+    "system": "QA-FIXTURE",
+    "runs": [
+      "QA-1"
+    ],
+    "origins": [
+      "QA-FIXTURE"
+    ]
+  },
+  "models": []
+}

@@ -1,0 +1,59 @@
+---
+// Work portfolio built only from the project records: what is in use, in progress and finished, with the
+// technologies each one actually lists. Nothing here is written separately from those records.
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { projectSummary, sortProjects, stageLabel } from '../utils/projects';
+const projects = sortProjects(await getCollection('projects'));
+const shown = projects.filter((p) => p.data.stage && ['in-use', 'active', 'finished', 'paused'].includes(p.data.stage));
+const tech = [...new Set(shown.flatMap((p) => p.data.technologies))];
+---
+<BaseLayout title="포트폴리오 — YARONG" description="Yarong이 만든 게임, 봇, 도구, 연구 프로젝트 모음.">
+  <div class="page shell">
+    <p class="eyebrow">Portfolio</p>
+    <h1 class="page-title">포트폴리오</h1>
+    <p class="lead">게임, Discord 봇, Unity 도구, 주식 연구를 만듭니다. 아래는 프로젝트 기록에서 바로 가져온 목록입니다.</p>
+
+    <section class="stack" aria-labelledby="stack-h">
+      <h2 id="stack-h" class="meta">사용한 기술</h2>
+      <ul>{tech.map((t) => <li>{t}</li>)}</ul>
+    </section>
+
+    <ol class="works">
+      {shown.map((p, i) => (
+        <li class:list={[{ big: i < 2 }]}>
+          <a href={`/projects/${p.id}/`}>
+            {p.data.media && <img src={p.data.media.poster} alt="" loading="lazy" />}
+            <span class="info">
+              <span class="meta">{stageLabel(p)}{p.data.category && ` · ${p.data.category}`}{p.data.year && ` · ${p.data.year}`}</span>
+              <strong>{p.data.title}</strong>
+              <span class="sum">{projectSummary(p)}</span>
+              {p.data.technologies.length > 0 && <span class="tech">{p.data.technologies.join(' · ')}</span>}
+            </span>
+          </a>
+        </li>
+      ))}
+    </ol>
+    <div class="cta"><a class="btn btn-primary" href="/contact">문의하기 <span class="arrow" aria-hidden="true">→</span></a><a class="btn btn-ghost" href="https://github.com/Yarong-i" rel="me">GitHub</a></div>
+  </div>
+</BaseLayout>
+<style>
+  .lead { max-width: 40rem; margin: -1.5rem 0 2rem; color: var(--muted); font-size: 1.05rem; }
+  .stack ul { display: flex; flex-wrap: wrap; gap: .4rem; margin: .75rem 0 2.5rem; padding: 0; list-style: none; }
+  .stack li { padding: .35rem .75rem; border: 1px solid var(--line-strong); border-radius: 999px; font-size: .85rem; }
+  .works { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 0; padding: 0; list-style: none; }
+  .works li.big { grid-column: span 3; }
+  .works li.big:nth-child(2) { grid-column: span 3; }
+  .works a { display: grid; height: 100%; overflow: hidden; border: 1px solid var(--line); border-radius: 20px; background: var(--surface); transition: border-color var(--base) var(--ease); }
+  .works a:hover, .works a:focus-visible { border-color: var(--muted); }
+  .big a:has(img) { grid-template-columns: 1.2fr 1fr; }
+  .works img { width: 100%; height: 100%; max-height: 22rem; object-fit: cover; }
+  .info { display: grid; align-content: start; gap: .45rem; padding: 1.3rem; }
+  .info strong { font: 800 1.4rem var(--display); letter-spacing: -.03em; }
+  .big .info strong { font-size: clamp(1.6rem, 3vw, 2.2rem); }
+  .sum { color: var(--muted); line-height: 1.55; }
+  .tech { color: var(--faint); font-size: .85rem; }
+  .cta { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 2.5rem; }
+  @media (max-width: 900px) { .works { grid-template-columns: 1fr 1fr; } .works li.big, .works li.big:nth-child(2) { grid-column: span 2; } }
+  @media (max-width: 600px) { .works { grid-template-columns: 1fr; } .works li.big, .works li.big:nth-child(2) { grid-column: auto; } .big a:has(img) { grid-template-columns: 1fr; } }
+</style>

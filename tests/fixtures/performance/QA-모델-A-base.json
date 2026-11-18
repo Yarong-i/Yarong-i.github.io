@@ -1,0 +1,10 @@
+{
+  "model": "QA-모델-A",
+  "strategy": "base",
+  "asOf": "2030-03-08",
+  "startDate": "2030-03-04",
+  "cumulativePct": 3.21,
+  "trades": 3,
+  "basis": "검증용 산식 설명",
+  "source": "QA-FIXTURE"
+}
