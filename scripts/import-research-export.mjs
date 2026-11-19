@@ -9,7 +9,9 @@
 //   published one is kept (record a real change by hand in `corrections`).
 // - Postmarket is filled when pending, and replaced only when it held provisional prices that the export now
 //   has in another state (e.g. the next-day confirmed close). The premarket part is untouched by this.
-// - A day's strategy figures are the research system's own snapshot for that day; written once.
+//   A postmarket with a new correctedAt (the research system's correction of a review made before the real
+//   close) replaces the published one once, with that day's strategy figures.
+// - A day's strategy figures are the research system's own snapshot for that day; written once (or by a correction).
 // - Corrections are appended once each (same time + ticker = same correction).
 // - Performance files hold the latest published cumulative figures; replaced only by a newer or equal asOf.
 // - Only the fields listed in the export are written; nothing is computed here.
@@ -66,10 +68,13 @@ for (const day of exp.days) {
     if (entry.premarket.status === 'pending' && premarket.status !== 'pending') { entry.premarket = premarket; notes.push(`${m.short}:premarket`); }
     else if (!same(core(entry.premarket), core(premarket))) warn(`${day.date} ${m.model}: export premarket differs from the published record; kept the published one`);
     const hadProvisional = (entry.postmarket?.results ?? []).some((r) => r.status === 'provisional');
-    if ((entry.postmarket?.status ?? 'pending') === 'pending' ? postmarket.status !== 'pending' : hadProvisional && !same(entry.postmarket, postmarket)) {
-      entry.postmarket = postmarket; notes.push(`${m.short}:postmarket`);
+    // A post-market review the research system corrected (made before the real close, e.g. a delayed-close day)
+    // carries correctedAt: the published postmarket and that day's strategy are replaced once per correction.
+    const corrected = Boolean(postmarket.correctedAt) && entry.postmarket?.correctedAt !== postmarket.correctedAt;
+    if (corrected || ((entry.postmarket?.status ?? 'pending') === 'pending' ? postmarket.status !== 'pending' : hadProvisional && !same(entry.postmarket, postmarket))) {
+      entry.postmarket = postmarket; notes.push(`${m.short}:postmarket${corrected ? ' (corrected)' : ''}`);
     }
-    if (strategy && !entry.strategy) { entry.strategy = strategy; notes.push(`${m.short}:strategy`); }
+    if (strategy && (!entry.strategy || (corrected && !same(entry.strategy, strategy)))) { entry.strategy = strategy; notes.push(`${m.short}:strategy`); }
     entry.runs ??= [];
     for (const r of runs) if (!entry.runs.includes(r)) { entry.runs.push(r); notes.push(`${m.short}:run`); }
   }

@@ -182,6 +182,8 @@ const modelRun = z.object({
     // pending: not reviewed yet · reviewed: prices added · nothing: no premarket picks to review · failed
     status: z.enum(['pending', 'reviewed', 'nothing', 'failed']),
     publishedAt: z.string().optional(),
+    // When the research system corrected a review made before the real close (the day's corrections say why).
+    correctedAt: z.string().optional(),
     detail: z.string().optional(),
     results: z.array(priceResult).default([]),
   }).default({ status: 'pending', results: [] }),
