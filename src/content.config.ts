@@ -158,6 +158,9 @@ const strategyDay = z.object({
   final: z.boolean(),
   tradingDays: z.number().int().nonnegative().optional(),
   trades: z.number().int().nonnegative().optional(),
+  // The day's close status in the ledger, and the ledger run whose restatement these figures are.
+  closeStatus: z.string().optional(),
+  restatedBy: z.string().optional(),
 });
 const modelRun = z.object({
   model: z.string(),
@@ -184,10 +187,15 @@ const modelRun = z.object({
     publishedAt: z.string().optional(),
     // When the research system corrected a review made before the real close (the day's corrections say why).
     correctedAt: z.string().optional(),
+    // The research export's version of this content; a new version replaces the published one.
+    revision: z.string().optional(),
     detail: z.string().optional(),
     results: z.array(priceResult).default([]),
   }).default({ status: 'pending', results: [] }),
   strategy: z.object({ base: strategyDay.optional(), filter10: strategyDay.optional() }).optional(),
+  // Earlier published versions of postmarket and strategy, each with when it was replaced (kept, not shown).
+  postmarketHistory: z.array(z.object({ replacedAt: z.string(), revision: z.string().nullable().optional() })
+    .passthrough()).default([]),
 });
 const research = defineCollection({
   loader: glob({ pattern: '**/*.json', base: researchBase }),

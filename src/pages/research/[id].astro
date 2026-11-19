@@ -77,7 +77,7 @@ const shortDay = (iso?: string) => (iso ? iso.slice(5).replace('-', '.') : '');
                       <div><dt>종가</dt><dd>{shown ? won(res?.close) : '—'}{res?.status === 'provisional' && <small> 잠정</small>}</dd></div>
                       <div><dt>종목 시가→종가</dt><dd class:list={[{ up: (change ?? 0) > 0, down: (change ?? 0) < 0 }]}>{change !== undefined ? formatPct(change) : run.postmarket.status === 'pending' ? '장후 대기' : '미확인'}</dd></div>
                     </dl>
-                    {res?.basis && res.status !== 'unconfirmed' && <p class="basis">가격 기준: {res.basis}{res.status === 'provisional' && ' · 잠정 종가, 다음 거래일 확정'}</p>}
+                    {res?.basis && res.status !== 'unconfirmed' && <p class="basis">가격 기준: {res.basis}{res.status === 'provisional' && (res.closeStatus === 'PROVISIONAL_UNCONFIRMED' ? ' · 잠정 종가, 이 종목은 확정 자료 없음' : ' · 잠정 종가, 다음 거래일 확정')}</p>}
                     {res?.status === 'unconfirmed' && res.note && <p class="basis">{res.note}</p>}
                     <div class="texts">
                       {pick.reasons.length > 0 && <div><h4>선정 이유</h4><ul>{pick.reasons.map((t) => <li>{t}</li>)}</ul></div>}
@@ -118,7 +118,7 @@ const shortDay = (iso?: string) => (iso ? iso.slice(5).replace('-', '.') : '');
               })}
             </div>
             {run.strategy?.base && !run.strategy.base.final && (
-              <p class="provisional-note">이날 당일 값은 잠정 종가로 계산해 그날 발표된 값입니다. 다음 거래일에 종가가 확정되며, 차이가 있으면 다음 날 누적에만 반영되고 이 당일 값은 고쳐지지 않습니다.</p>
+              <p class="provisional-note">이날 당일 값은 잠정 종가로 계산한 값입니다. 다음 거래일에 종가가 확정되면 종가·당일·누적 값이 확정 값으로 갱신되고, 바뀐 내용과 시각은 정정 이력에 남습니다.</p>
             )}
             <p class="basis">매수 조건은 이 페이지의 규칙 확인이고, 모의 매수와 수익률은 연구 시스템 장부의 확정 값입니다. {FILTER_SCORE}점은 필터 전략의 매수 조건일 뿐 추천 공개 여부와는 관계없습니다. 비용 전 · 실제 주문 아님.</p>
           </div>
