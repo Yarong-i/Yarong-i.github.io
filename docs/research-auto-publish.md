@@ -42,8 +42,14 @@ Target: a recommendation sent around 08:30 is public within a few minutes, befor
 - A failed export, push, merge or deploy changes nothing public; the next timer run, scheduled retry or a manual
   run repeats it with the same data and recovers. Re-running with the same export creates no commit.
 - No step can move records backwards: the server always exports the current database, merge and deploy always
-  read the latest main, pre-market records are never replaced, postmarket only moves from pending/provisional,
-  and performance files only move to a newer as-of date.
+  read the latest main, pre-market records are never replaced, postmarket never goes back to pending, and
+  performance files only move to a newer as-of date.
+- Postmarket and a day's strategy figures follow the research system's current statement of that day: a
+  provisional close confirmed (same price: its status and source change), a corrected close, a day restated
+  after a later correction. The replaced version stays in the record's `postmarketHistory` with `replacedAt`,
+  and the before -> after is added to the day's 정정 이력. Importing the same export again changes nothing.
+- A close counts as confirmed only with a confirmation behind it (the ledger's confirmed close of that stock and
+  day, or a past-session closing-auction read); otherwise it is shown as 잠정.
 - Home calls a record 오늘의 주식 연구 only when its trading day is today (KST, checked in the browser); otherwise
   it shows 최근 주식 연구 with the 최근 기록 badge.
 
@@ -66,7 +72,8 @@ The data repository's GITHUB_TOKEN cannot start a workflow in this repository, s
   Earlier runs have no rank; list position (ASK's "1) 2)") is display order, never a rank.
 - 기본 1순위 전략 = the comparison ledger's 100% exposure account: the final first choice bought at the
   regular-session open and sold at the close, compounded daily, before costs, never an order. Day and cumulative
-  figures are copied from that day's post-market ledger run.
+  figures are copied from the latest ledger run's restatement of every day (`history`); a day it does not cover
+  keeps that day's own ledger snapshot.
 - There is no 10-point filter strategy in the source; the site shows 미연동.
 
 ## Still missing in the research system
