@@ -1,0 +1,40 @@
+---
+// A project's update log (already public changes), newest first. Each entry: date, title, what changed, why,
+// and what was checked - a part that was not recorded is left out, never filled in.
+import type { CollectionEntry } from 'astro:content';
+import { formatFeedDate } from '../utils/news';
+interface Props { updates: CollectionEntry<'news'>[]; }
+const { updates } = Astro.props;
+---
+{updates.length > 0 && (
+  <section id="updates" class="updates" aria-labelledby="updates-title">
+    <h2 id="updates-title">업데이트 기록</h2>
+    <ol class="update-list">
+      {updates.map(({ data }) => (
+        <li>
+          <p class="u-head"><time datetime={data.date.toISOString().slice(0, 10)}>{formatFeedDate(data.date)}</time><strong>{data.title}</strong></p>
+          <dl>
+            {data.change && <div><dt>바꾼 내용</dt><dd>{data.change}</dd></div>}
+            {data.reason && <div><dt>이유</dt><dd>{data.reason}</dd></div>}
+            {data.result && <div><dt>확인한 결과</dt><dd>{data.result}</dd></div>}
+          </dl>
+        </li>
+      ))}
+    </ol>
+  </section>
+)}
+<style>
+  .updates { margin-top: clamp(2.5rem, 5vw, 3.5rem); padding-top: 1.25rem; border-top: 1px solid var(--line); scroll-margin-top: 5rem; }
+  .updates h2 { margin: 0 0 .75rem; font: 800 clamp(1.25rem, 2vw, 1.55rem) var(--display); letter-spacing: -.02em; }
+  .update-list { display: grid; margin: 0; padding: 0; list-style: none; }
+  .update-list > li { padding: 1rem 0; border-top: 1px solid var(--line); }
+  .update-list > li:first-child { border-top: 0; padding-top: .25rem; }
+  .u-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: .25rem .9rem; margin: 0 0 .5rem; }
+  .u-head time { color: var(--faint); font: 600 .82rem var(--body); font-variant-numeric: tabular-nums; }
+  .u-head strong { font: 800 1.1rem/1.35 var(--display); letter-spacing: -.02em; }
+  dl { display: grid; gap: .35rem; margin: 0; }
+  dl > div { display: grid; grid-template-columns: 6.5rem minmax(0, 1fr); gap: .75rem; }
+  dt { color: var(--faint); font: 600 .82rem/1.7 var(--body); }
+  dd { margin: 0; color: var(--muted); line-height: 1.7; }
+  @media (max-width: 560px) { dl > div { grid-template-columns: 1fr; gap: .1rem; } }
+</style>

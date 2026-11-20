@@ -4,9 +4,19 @@
 import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { CONTACT, mailto } from '../data/site';
+// @ts-ignore -- Node built-in used only at build time; this project does not install @types/node.
+import { statSync } from 'node:fs';
 import { projectSummary, sortProjects, stageLabel } from '../utils/projects';
 const projects = sortProjects(await getCollection('projects'));
 const withPortfolio = new Set((await getCollection('portfolios')).map((p) => p.id));
+// Portfolio PDF: replace public/files/yarong-portfolio.pdf to update it (the URL stays the same). The size shown is
+// read from the file at build time; without the file no button is published.
+const PDF_URL = '/files/yarong-portfolio.pdf';
+let pdfSize: string | undefined;
+try {
+  const bytes = statSync('public/files/yarong-portfolio.pdf').size;
+  pdfSize = bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)}MB` : `${Math.max(1, Math.round(bytes / 1024))}KB`;
+} catch { pdfSize = undefined; }
 const shown = projects.filter((p) => p.data.stage && ['live', 'operating', 'in-use', 'active', 'finished', 'paused'].includes(p.data.stage));
 const tech = [...new Set(shown.flatMap((p) => p.data.technologies))];
 ---
@@ -15,6 +25,18 @@ const tech = [...new Set(shown.flatMap((p) => p.data.technologies))];
     <p class="eyebrow">Portfolio</p>
     <h1 class="page-title">포트폴리오</h1>
     <p class="lead">게임, Discord 봇, Unity 도구, 주식 연구를 만듭니다. 아래는 프로젝트 기록에서 바로 가져온 목록입니다.</p>
+    {pdfSize && (
+      <section class="pdf" aria-labelledby="pdf-h">
+        <div class="pdf-text">
+          <h2 id="pdf-h">포트폴리오 PDF</h2>
+          <p>게임 QA·기획 중심으로 정리한 9쪽 문서 · PDF · {pdfSize}</p>
+        </div>
+        <div class="pdf-actions">
+          <a class="btn btn-primary" href={PDF_URL} download="Shin_Bubin_Game_Portfolio.pdf">PDF 다운로드 <span class="pdf-size">{pdfSize}</span></a>
+          <a class="btn btn-ghost" href={PDF_URL} target="_blank" rel="noopener">브라우저에서 열기 <span class="arrow" aria-hidden="true">↗</span></a>
+        </div>
+      </section>
+    )}
 
     <section class="stack" aria-labelledby="stack-h">
       <h2 id="stack-h" class="meta">사용한 기술</h2>
@@ -46,6 +68,13 @@ const tech = [...new Set(shown.flatMap((p) => p.data.technologies))];
 </BaseLayout>
 <style>
   .lead { max-width: 40rem; margin: -1.5rem 0 2rem; color: var(--muted); font-size: 1.05rem; }
+  .pdf { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem 2rem; margin: 0 0 2.5rem; padding: 1.1rem 0; border-block: 1px solid var(--line); }
+  .pdf h2 { margin: 0; font: 800 1.2rem var(--display); letter-spacing: -.02em; }
+  .pdf p { margin: .25rem 0 0; color: var(--muted); font-size: .92rem; }
+  .pdf-actions { display: flex; flex-wrap: wrap; gap: .6rem; }
+  .pdf-actions .btn { min-height: 3rem; }
+  .pdf-size { font-weight: 500; opacity: .75; }
+  @media (max-width: 600px) { .pdf-actions, .pdf-actions .btn { width: 100%; } }
   .stack ul { display: flex; flex-wrap: wrap; gap: .4rem; margin: .75rem 0 2.5rem; padding: 0; list-style: none; }
   .stack li { padding: .35rem .75rem; border: 1px solid var(--line-strong); border-radius: 999px; font-size: .85rem; }
   .works { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 0; padding: 0; list-style: none; }

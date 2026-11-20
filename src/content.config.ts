@@ -237,14 +237,20 @@ const performance = defineCollection({
   }),
 });
 
-// Dated updates: game patches, bot updates, site changes. New research days and new writings are added
-// to Home's feed automatically, so they do not need a news file.
+// Project update log: one file per change that is already public, src/content/news/<date>-<slug>.md.
+// Shown on Home (최근 소식, newest 3) and on the project's page. Research days are not part of this log; they stay
+// in 주식 연구. `result` is only what was actually checked - leave it out rather than guess.
 const news = defineCollection({
   loader: glob({ pattern: '**/*.{md,mdx}', base: './src/content/news' }),
   schema: z.object({
     date: z.coerce.date(),
     kind: z.enum(['game', 'bot', 'research', 'site']),
+    // Project id (file name in src/content/projects) the update belongs to.
+    project: z.string().optional(),
     title: z.string(),
+    change: z.string().optional(),
+    reason: z.string().optional(),
+    result: z.string().optional(),
     href: z.string().optional(),
     draft: z.boolean().default(false),
   }),

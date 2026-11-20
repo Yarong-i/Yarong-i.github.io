@@ -27,7 +27,7 @@ const pastResearch = projects.filter((p) => isPastResearch(p) && p.data.featured
 const nowUpdated = NOW.updated.replace(/-/g, '.');
 const researchDays = await getResearchDays();
 const performance = await getPerformance();
-const feed = await getFeed(5);
+const feed = await getFeed(3);
 const game = featured.find((p) => p.data.media);
 const bot = featured.find((p) => !p.data.media);
 // Secondary navigation for the feed: browse by topic.
@@ -69,7 +69,7 @@ const topics: ReadonlyArray<readonly [string, string]> = [
         </section>
         {bot && <div class="area-bot"><FeaturedProject project={bot} /></div>}
         <section class="area-news news" aria-labelledby="news-h">
-          <div class="news-head"><h2 id="news-h">최근 소식</h2></div>
+          <div class="news-head"><h2 id="news-h">최근 소식</h2><span class="news-sub">반영한 업데이트</span></div>
           {feed.length > 0 ? (
             <ol class="feed">
               {feed.map((item) => (
@@ -167,6 +167,8 @@ const topics: ReadonlyArray<readonly [string, string]> = [
   /* News: a plain dated list with topic links as secondary navigation. */
   .news { display: grid; align-content: start; gap: .5rem; }
   .news-head h2 { margin: 0; font: 800 1.15rem var(--display); letter-spacing: -.02em; }
+  .news-head { display: flex; align-items: baseline; gap: .6rem; }
+  .news-sub { color: var(--faint); font: 500 .78rem var(--body); }
   .feed { display: grid; margin: 0; padding: 0; list-style: none; }
   .feed li { display: grid; grid-template-columns: 5.6rem 4.6rem minmax(0, 1fr); align-items: baseline; gap: .6rem; padding: .55rem 0; border-top: 1px solid var(--line); }
   .feed li:last-child { border-bottom: 1px solid var(--line); }
