@@ -25,6 +25,19 @@ const projects = defineCollection({
     home: z.number().int().positive().optional(),
     // Position in Home's large featured area (1 = largest). Featured projects are not repeated in `home` lists.
     featured: z.number().int().positive().optional(),
+    // Home's "개발·연구 중" area (projects still being made or researched). `order` is the position there
+    // (1 = left on PC, first on mobile); such projects are not repeated in "다른 프로젝트". `status` is the
+    // short work state also shown in the project list; `now` is the current work, `question` a research
+    // project's key question; `updated` is the date these lines were last changed by hand (not a build date).
+    // `image` is optional: one real screenshot from `screens` to show large; without it the area is text only.
+    wip: z.object({
+      order: z.number().int().positive(),
+      status: z.string(),
+      now: z.string().optional(),
+      question: z.string().optional(),
+      image: z.string().optional(),
+      updated: z.coerce.date(),
+    }).optional(),
     // Real screenshots / short clips of the project in use. Paths are under /public. Never use mock-ups here.
     media: z.object({
       poster: z.string(),

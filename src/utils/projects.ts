@@ -18,7 +18,9 @@ export const STAGE_ORDER = Object.keys(STAGES) as Stage[];
 
 /** Stage label with its optional qualifier, e.g. "제작 마침 · 미출시". Undefined when no stage is set. */
 export function stageLabel(project: Project): string | undefined {
-  const { stage, stageNote } = project.data;
+  const { stage, stageNote, wip } = project.data;
+  // A project in Home's "개발·연구 중" area shows its own work state everywhere, e.g. 프로토타입 제작 중.
+  if (wip) return wip.status;
   if (!stage) return undefined;
   return stageNote ? `${STAGES[stage]} · ${stageNote}` : STAGES[stage];
 }

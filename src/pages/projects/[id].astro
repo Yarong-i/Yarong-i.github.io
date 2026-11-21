@@ -31,6 +31,9 @@ if (earlier?.private !== undefined) earlierFacts.push(['Source', earlier.private
 const hasBody = Boolean(project.body?.trim());
 const portfolio = await getEntry('portfolios', project.id);
 const updates = await getProjectUpdates(project.id);
+// A project in Home's "개발·연구 중" area keeps its state and current work in `wip` (one place to edit).
+const statusTitle = data.statusTitle ?? data.wip?.status;
+const statusText = data.statusText ?? data.wip?.now;
 const hasRecord = data.progress.length > 0 || data.result || data.reason || data.versions.length > 0 || related.length > 0 || data.changelog;
 ---
 <BaseLayout title={`${data.title} — YARONG`} description={summary}>
@@ -110,6 +113,9 @@ const hasRecord = data.progress.length > 0 || data.result || data.reason || data
       <h1 class="intro-title">{data.title}</h1>
       {data.alias && <p class="intro-alias">{data.alias}</p>}
       <p class="intro-tagline">{data.tagline}</p>
+      {data.wip?.question && (
+        <div class="intro-question"><span>핵심 질문</span><p>{data.wip.question}</p></div>
+      )}
       <div class="intro-meta">
         {stage && <span class="stage" data-stage={data.stage}>{stage}</span>}
         {data.year !== undefined && <span>{data.year}</span>}
@@ -154,11 +160,11 @@ const hasRecord = data.progress.length > 0 || data.result || data.reason || data
         </section>
       )}
 
-      {(data.statusTitle || data.statusText || data.howTo || data.notice) && (
+      {(statusTitle || statusText || data.howTo || data.notice) && (
         <section class="intro-section" aria-labelledby="status-title">
           <h2 id="status-title">현재 상태</h2>
           <dl class="status-block">
-            {data.statusTitle && <div><dt>상태</dt><dd><strong>{data.statusTitle}</strong>{data.statusText && <p>{data.statusText}</p>}</dd></div>}
+            {statusTitle && <div><dt>상태</dt><dd><strong>{statusTitle}</strong>{statusText && <p>{statusText}</p>}</dd></div>}
             {data.howTo && <div><dt>이용 방법</dt><dd>{data.howTo}</dd></div>}
             {data.playUrl && <div><dt>플레이</dt><dd><a class="text-link" href={data.playUrl} target="_blank" rel="noopener">Roblox에서 열기 ↗</a></dd></div>}
           </dl>
@@ -168,14 +174,14 @@ const hasRecord = data.progress.length > 0 || data.result || data.reason || data
 
       <UpdateLog updates={updates} />
 
-      <section class="intro-section" aria-labelledby="more-title">
+      {(data.technologies.length > 0 || portfolio || related.length > 0) && <section class="intro-section" aria-labelledby="more-title">
         <h2 id="more-title">더 보기</h2>
         {data.technologies.length > 0 && <ul class="tag-list">{data.technologies.map((t: string) => <li class="tag">{t}</li>)}</ul>}
         <ul class="intro-links">
           {portfolio && <li><a class="text-link" href={`/projects/${project.id}/portfolio/`}>포트폴리오 — {portfolio.data.title}</a></li>}
           {related.map((item) => <li><a class="text-link" href={`/projects/${item.id}/`}>연결된 프로젝트 — {item.data.title}</a></li>)}
         </ul>
-      </section>
+      </section>}
     </article>
   ) : (
     <article class="page shell reveal">
@@ -267,6 +273,10 @@ const hasRecord = data.progress.length > 0 || data.result || data.reason || data
   .intro-title { margin: 0; font: 800 clamp(2.6rem, 6vw, 4.6rem)/1 var(--display); letter-spacing: -.05em; }
   .intro-alias { margin: .5rem 0 0; color: var(--faint); font: 500 .95rem var(--body); }
   .intro-tagline { max-width: 40rem; margin: 1.25rem 0 0; font: 600 clamp(1.25rem, 2.6vw, 1.75rem)/1.4 var(--display); letter-spacing: -.02em; }
+  /* A research project's key question: larger type with a starting rule, no card. */
+  .intro-question { display: grid; gap: .4rem; max-width: 44rem; margin-top: 1.75rem; padding-top: 1rem; border-top: 2px solid var(--text); }
+  .intro-question span { color: var(--faint); font: 700 .78rem var(--body); letter-spacing: .04em; }
+  .intro-question p { margin: 0; font: 800 clamp(1.6rem, 3.6vw, 2.5rem)/1.25 var(--display); letter-spacing: -.035em; }
   .intro-meta { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; margin-top: 1.1rem; color: var(--muted); font-size: .9rem; }
   .stage[data-stage='live']::before, .stage[data-stage='operating']::before { content: ''; display: inline-block; width: .5rem; height: .5rem; margin-right: .45rem; border-radius: 50%; background: #3FD18A; vertical-align: .08em; }
   .intro-actions { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1.5rem; }

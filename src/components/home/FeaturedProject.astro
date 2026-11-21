@@ -46,6 +46,19 @@ const features = highlights.length > 0 ? highlights : !media && description?.inc
         <a class="btn btn-ghost" href={href}>프로젝트 소개 <span class="arrow" aria-hidden="true">→</span></a>
       </div>
     </div>
+    {highlights.length > 0 && (
+      <ul class="game-points" aria-label="대표 특징">{highlights.map((h) => <li>{h}</li>)}</ul>
+    )}
+    {screens.length > 0 && (
+      <ul class="shots-row" aria-label={`${title} 실제 화면`}>
+        {screens.map((x) => (
+          <li><a href={x.src} data-lightbox data-caption={x.caption} data-alt={x.alt}>
+            <img src={x.src} alt="" width={x.width} height={x.height} loading="lazy" decoding="async" />
+            <span class="shots-cap">{x.caption}</span><span class="sr-only"> 크게 보기</span>
+          </a></li>
+        ))}
+      </ul>
+    )}
   </article>
 ) : (
   <article class="bot">
@@ -123,6 +136,22 @@ const features = highlights.length > 0 ? highlights : !media && description?.inc
   .text { display: grid; gap: .35rem; flex: 1 1 20rem; min-width: 0; }
   .game h3 { white-space: nowrap; margin: 0; font: 800 clamp(2rem, 3.6vw, 3rem)/1 var(--display); letter-spacing: -.045em; }
   .game h3 small { margin-left: .6rem; color: var(--faint); font: 500 .85rem var(--body); letter-spacing: 0; white-space: nowrap; }
+  /* The game's highlights from its record, as a ruled row of words (no chips, no cards). */
+  .game-points { display: flex; flex-wrap: wrap; gap: .35rem 1.4rem; margin: .35rem 0 0; padding: .9rem 0 0; list-style: none; border-top: 1px solid var(--line); }
+  .game-points li { color: var(--muted); font: 800 clamp(1.05rem, 1.6vw, 1.3rem)/1.35 var(--display); letter-spacing: -.02em; }
+  /* Real screens as a row under the caption on wide screens (where the game sits beside the research column);
+     on narrower screens the small strip over the key art is used instead. Thumbnails are cropped to one shape;
+     each opens the whole screen in the image viewer. */
+  .shots-row { display: none; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; margin: .25rem 0 0; padding: 0; list-style: none; }
+  .shots-row a { display: grid; gap: .4rem; }
+  .shots-row img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; border: 1px solid var(--line); border-radius: 10px; background: #000; transition: border-color var(--fast); }
+  .shots-row a:hover img, .shots-row a:focus-visible img { border-color: var(--muted); }
+  .shots-cap { color: var(--faint); font: 600 .78rem/1.35 var(--body); }
+  .shots-row a:hover .shots-cap, .shots-row a:focus-visible .shots-cap { color: var(--text); }
+  @media (min-width: 1024px) {
+    .shots-row { display: grid; }
+    .thumbs { display: none; }
+  }
   .actions { display: flex; flex-wrap: wrap; gap: .5rem; flex: 0 0 auto; }
   .actions .btn { min-height: 3rem; }
   .tri { width: 0; height: 0; border-block: .38em solid transparent; border-left: .62em solid currentColor; }
