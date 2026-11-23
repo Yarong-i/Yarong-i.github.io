@@ -44,6 +44,16 @@ Target: a recommendation sent around 08:30 is public within a few minutes, befor
 - No step can move records backwards: the server always exports the current database, merge and deploy always
   read the latest main, pre-market records are never replaced, postmarket never goes back to pending, and
   performance files only move to a newer as-of date.
+- A pre-market record that is published never goes back to pending or failed. A record stored as failed
+  becomes published only when the research system states, for the same run, that it was sent: status published,
+  an announcement time on that trading day (KST), the same PREMARKET run id and the same picks (2026-11-23:
+  Sonnet PREMARKET-108 was exported at 08:31:06 while its message was still being sent, and sent at 08:31:07).
+  The failed version stays in the record's `premarketHistory` (with `replacedAt` and the reason) and the change
+  is added to the day's 정정 이력. Picks alone are never taken as proof of sending.
+- The server export (deploy/158/export_public.py, not in this repository) calls a recommendation that has no
+  sent message yet 발표 대기 ("발송 확인을 기다리고 있습니다", picks not published) until the send deadline plus
+  the late grace, and 실행 실패 only after that. (This export change was prepared on 2026-11-24 while the server
+  was unreachable; until it is installed there, the importer rule above repairs such a record on the next export.)
 - Postmarket and a day's strategy figures follow the research system's current statement of that day: a
   provisional close confirmed (same price: its status and source change), a corrected close, a day restated
   after a later correction. The replaced version stays in the record's `postmarketHistory` with `replacedAt`,

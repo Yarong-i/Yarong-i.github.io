@@ -5,8 +5,13 @@
 //
 // Merge rules (idempotent: importing the same export twice changes nothing):
 // - A day keeps its date and its first registeredAt. Days are never re-dated.
-// - A published premarket record is never replaced. If the export differs, a warning is printed and the
-//   published one is kept (record a real change by hand in `corrections`).
+// - A published premarket record is never replaced, and never goes back to pending or failed. If the export
+//   differs, a warning is printed and the published one is kept (record a real change by hand in `corrections`).
+// - A premarket stored as failed (e.g. "made but sending not confirmed" when the export ran while the message was
+//   still being sent) becomes published only when the research system now states, for the SAME run, that it was
+//   announced: status published, an announcement time on that trading day (KST), the same PREMARKET run id(s) and
+//   the same picks. Having picks is not enough. The failed version is kept in premarketHistory and the change is
+//   named in the day's corrections (previous state, when it was corrected, why). Anything else is warned and kept.
 // - Postmarket and the day's strategy figures follow the research system's CURRENT statement of the day: filled
 //   when pending, replaced when their values change (provisional close confirmed - same price too, its status and
 //   source change -, corrected close, day restated after a later correction, a corrected early review). The
@@ -72,6 +77,20 @@ function changeText(before, after) {
   } else if (as && !bs) parts.push('성과 추가');
   return parts.join(' · ');
 }
+const kstDate = (iso) => new Date(new Date(iso).getTime() + 9 * 3600e3).toISOString().slice(0, 10);
+const kstTime = (iso) => new Date(new Date(iso).getTime() + 9 * 3600e3).toISOString().slice(11, 19);
+const premarketRuns = (list) => (list ?? []).filter((r) => /^PREMARKET/.test(r)).sort();
+// Why a stored failed premarket may NOT be recovered from this export (undefined = it may). See the header.
+function recoveryBlock(entry, pre, runs, date, recordRuns) {
+  if (entry.premarket.status !== 'failed') return 'stored premarket is not failed';
+  if (pre.status !== 'published') return 'export does not say published';
+  if (!pre.publishedAt || Number.isNaN(new Date(pre.publishedAt).getTime())) return 'no announcement time';
+  if (kstDate(pre.publishedAt) !== date) return `announcement ${pre.publishedAt} is not on ${date} (KST)`;
+  const now = premarketRuns(runs), stored = premarketRuns(entry.runs?.length ? entry.runs : recordRuns);
+  if (!now.length || !same(now, stored)) return `run ${now.join(',') || '-'} is not the stored run ${stored.join(',') || '-'}`;
+  if (!(entry.premarket.picks ?? []).length || !same(core(entry.premarket).picks, core(pre).picks)) return 'picks differ';
+  return undefined;
+}
 const write = (target, data) => { if (!dryRun) fs.writeFileSync(target, `${JSON.stringify(data, null, 2)}\n`, 'utf8'); };
 const stats = { added: 0, updated: 0, unchanged: 0, warnings: 0, perf: 0 };
 const warn = (msg) => { stats.warnings += 1; console.warn(`warn  ${msg}`); };
@@ -101,10 +120,33 @@ for (const day of exp.days) {
     // Names describe a model; copy them only onto a record of that same model id.
     const fields = entry.model === m.model ? ['key', 'label', 'short', 'role'] : ['key', 'role'];
     for (const k of fields) if (meta[k] !== undefined && entry[k] === undefined) { entry[k] = meta[k]; notes.push(`${m.short}:${k}`); }
+    const block = entry.premarket.status === 'failed' && premarket.status === 'published'
+      ? recoveryBlock(entry, premarket, runs, day.date, record.source.runs) : 'n/a';
     if (entry.premarket.status === 'pending' && premarket.status !== 'pending') { entry.premarket = premarket; notes.push(`${m.short}:premarket`); }
-    else if (!same(core(entry.premarket), core(premarket))) warn(`${day.date} ${m.model}: export premarket differs from the published record; kept the published one`);
+    else if (block === undefined) {
+      // Failed -> published for the same run: the research system confirmed the sending after this was stored.
+      const old = entry.premarket;
+      entry.premarketHistory ??= [];
+      // A failed premarket was stored with postmarket 'nothing' (no picks to review). That no longer holds: the
+      // postmarket goes back to waiting and the normal rules below fill it. A real review is never touched.
+      const oldPost = entry.postmarket?.status === 'nothing' ? entry.postmarket : undefined;
+      entry.premarketHistory.push({ replacedAt: now, reason: 'sent-confirmed', premarket: old, ...(oldPost ? { postmarket: oldPost } : {}) });
+      entry.premarket = premarket;
+      if (oldPost) entry.postmarket = { status: 'pending', results: [] };
+      const run = premarketRuns(runs).join(', ');
+      dayChanges.push({ at: now, ticker: `${m.model}:premarket`,
+        note: `${m.short ?? m.model} 장전 상태 정정: 실행 실패(발송 미확인) → 정상 발표. 연구 시스템이 같은 실행(${run})의 `
+          + `발송 완료를 ${kstTime(premarket.publishedAt)}(KST)로 확인했습니다. 추천 종목과 점수는 바뀌지 않았습니다.` });
+      notes.push(`${m.short}:premarket recovered`);
+    }
+    else if (!same(core(entry.premarket), core(premarket))) warn(`${day.date} ${m.model}: export premarket differs from the stored record; kept the stored one`
+      + (block !== 'n/a' ? ` (not recovered: ${block})` : ''));
+    // An export that does not say published for a premarket stored as published (e.g. an older 'failed' export)
+    // also derives its postmarket from that state ('nothing'); none of it is applied.
+    const rejected = entry.premarket.status === 'published' && premarket.status !== 'published';
     const old = entry.postmarket ?? { status: 'pending', results: [] };
-    if (old.status === 'pending') {
+    if (rejected) { /* premarket kept above with a warning; postmarket and strategy stay as stored */ }
+    else if (old.status === 'pending') {
       if (postmarket.status !== 'pending') { entry.postmarket = postmarket; notes.push(`${m.short}:postmarket`); }
       if (strategy && (postmarket.status !== 'pending' || !entry.strategy) && !same(entry.strategy, strategy)) { entry.strategy = strategy; notes.push(`${m.short}:strategy`); }
     } else if (postmarket.status !== 'pending') {

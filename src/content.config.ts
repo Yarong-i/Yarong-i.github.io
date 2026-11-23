@@ -209,6 +209,9 @@ const modelRun = z.object({
   // Earlier published versions of postmarket and strategy, each with when it was replaced (kept, not shown).
   postmarketHistory: z.array(z.object({ replacedAt: z.string(), revision: z.string().nullable().optional() })
     .passthrough()).default([]),
+  // An earlier stored premarket replaced once its sending was confirmed for the same run (failed -> published),
+  // with when and why it was replaced (kept, not shown; the day's corrections name the change).
+  premarketHistory: z.array(z.looseObject({ replacedAt: z.string(), reason: z.string() })).default([]),
 });
 const research = defineCollection({
   loader: glob({ pattern: '**/*.json', base: researchBase }),
