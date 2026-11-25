@@ -26,7 +26,10 @@
 //   The premarket part is untouched by this.
 // - Corrections are appended once each (same time + ticker = same correction).
 // - Performance files hold the latest published cumulative figures; replaced only by a newer or equal asOf.
-// - Only the fields listed in the export are written; nothing is computed here.
+// - Only the fields listed in the export are written; nothing is computed here. A figure the research system could
+//   not compute yet (a missing price) is null with its reason (dayPending / cumPending / cumulativePending) and is
+//   copied as it is - never turned into 0, cash or an earlier figure. When the price is filled the day is revised.
+// - A model that is no longer in the export (disabled later) keeps every record already published here.
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -234,7 +237,8 @@ for (const p of exp.performance ?? []) {
   if (old && old.asOf > p.asOf) { warn(`${target}: existing asOf ${old.asOf} is newer than ${p.asOf}; kept`); continue; }
   if (old && same(old, p)) continue;
   stats.perf += 1;
-  console.log(`perf   ${p.short ?? p.model} ${p.strategy} cum ${p.cumulativePct.toFixed(2)}% as of ${p.asOf}`);
+  // cumulativePct is null while a price inside the period is missing (cumulativePending says why).
+  console.log(`perf   ${p.short ?? p.model} ${p.strategy} cum ${pctText(p.cumulativePct)} as of ${p.asOf}`);
   write(target, p);
 }
 console.log(`${dryRun ? '[dry-run] ' : ''}days added ${stats.added}, updated ${stats.updated}, unchanged ${stats.unchanged}; performance files ${stats.perf}; warnings ${stats.warnings}`);

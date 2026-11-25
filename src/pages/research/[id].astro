@@ -1,7 +1,7 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import {
-  FILTER_SCORE, POSTMARKET_LABEL, premarketState, STRATEGY_LABEL,
+  EXPOSURES, FILTER_SCORE, POSTMARKET_LABEL, premarketState, STRATEGY_LABEL, isPct,
   displayName, executedText, formatPct, formatResearchDate, formatStamp, getResearchDays, modelSlug, openToClose,
   resultFor, strategyDecisions, type ResearchDay,
 } from '../../utils/research';
@@ -115,8 +115,24 @@ const shortDay = (iso?: string) => (iso ? iso.slice(5).replace('-', '.') : '');
                     <dt class="strat-name">{STRATEGY_LABEL[key]}</dt>
                     <dd><span class="k">매수 조건</span><span data-buys={String(decisions[key].buys)}>{decisions[key].text}</span></dd>
                     <dd><span class="k">모의 매수</span><span>{executedText(run, key)}</span></dd>
-                    <dd><span class="k">당일</span><span>{s?.dayPct !== undefined ? `${formatPct(s.dayPct)}${s.final ? '' : ' (잠정)'}` : '미연동'}</span></dd>
-                    <dd><span class="k">누적</span><span>{s?.cumPct !== undefined ? `${formatPct(s.cumPct)} · ${shortDay(s.startDate)}~${shortDay(s.asOf)}` : '미연동'}</span></dd>
+                    {/* null = the research system could not compute it yet (a missing price): 미완료 with its reason,
+                        never 0. Absent = this strategy is not linked. */}
+                    <dd><span class="k">당일</span><span>{isPct(s?.dayPct) ? `${formatPct(s.dayPct)}${s.final ? '' : ' (잠정)'}` : s?.dayPending ? `미완료 · ${s.dayPending}` : s ? '미확인' : '미연동'}</span></dd>
+                    <dd><span class="k">누적</span><span>{isPct(s?.cumPct) ? `${formatPct(s.cumPct)} · ${shortDay(s.startDate)}~${shortDay(s.asOf)}` : s?.cumPending ? `미완료 · ${s.cumPending}` : s ? '미확인' : '미연동'}</span></dd>
+                    {s?.startDate && <dd><span class="k">평가 시작</span><span>{shortDay(s.startDate)}{s.tradingDays !== undefined && ` · 거래일 ${s.tradingDays}`}</span></dd>}
+                    {s?.exposures && (
+                      <dd class="exp"><span class="k">노출별</span>
+                        <table>
+                          <thead><tr><th scope="col">노출</th><th scope="col">당일</th><th scope="col">누적</th></tr></thead>
+                          <tbody>
+                            {EXPOSURES.map((e) => {
+                              const x = s.exposures?.[e.key];
+                              return <tr><th scope="row">{e.label}</th><td>{isPct(x?.dayPct) ? formatPct(x.dayPct) : '미완료'}</td><td>{isPct(x?.cumPct) ? formatPct(x.cumPct) : '미완료'}</td></tr>;
+                            })}
+                          </tbody>
+                        </table>
+                      </dd>
+                    )}
                   </dl>
                 );
               })}
@@ -185,10 +201,14 @@ const shortDay = (iso?: string) => (iso ? iso.slice(5).replace('-', '.') : '');
   .strategy { margin-top: 1.5rem; padding: 1rem 1.1rem; border-radius: 14px; background: #0F1116; }
   .strategy h3 { margin: 0 0 .6rem; font: 700 .9rem var(--body); }
   .strat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem 1.5rem; }
-  .strat-grid dl { display: grid; gap: .3rem; margin: 0; }
+  .strat-grid dl { display: grid; align-content: start; gap: .3rem; margin: 0; }
   .strat-name { font: 700 .9rem var(--body); }
   .strat-grid dd { display: grid; grid-template-columns: 4.5rem minmax(0, 1fr); gap: .5rem; margin: 0; font-size: .88rem; font-variant-numeric: tabular-nums; }
   .k { color: var(--faint); font-weight: 600; }
+  .exp table { border-collapse: collapse; font-size: .84rem; }
+  .exp th, .exp td { padding: .1rem .9rem .1rem 0; text-align: right; font-weight: 500; }
+  .exp thead th { color: var(--faint); font-weight: 600; }
+  .exp tbody th, .exp thead th:first-child { text-align: left; color: var(--muted); }
   [data-buys='false'] { color: var(--muted); }
   .provisional-note { margin: .75rem 0 0; padding: .55rem .75rem; border-left: 3px solid #E3A008; color: #F5C451; font-size: .85rem; line-height: 1.55; }
   .pager { display: flex; justify-content: space-between; gap: 1rem; margin: 3rem 0 1rem; }

@@ -2,13 +2,27 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import ResearchToday from '../../components/ResearchToday.astro';
 import {
-  FILTER_SCORE, POSTMARKET_LABEL, premarketState, STRATEGY_LABEL,
-  displayName, formatPct, formatResearchDate, formatStamp, getPerformance, getResearchDays, isoDay, modelSlug, modelsIn,
+  EXPOSURES, FILTER_SCORE, POSTMARKET_LABEL, premarketState, STRATEGY_LABEL,
+  displayName, formatPct, formatResearchDate, formatStamp, getPerformance, getResearchDays, isoDay, isPct, modelSlug, modelsIn,
+  monthDay,
 } from '../../utils/research';
 const days = await getResearchDays();
 const performance = await getPerformance();
 const models = modelsIn(days);
 const perf = (model: string, strategy: 'base' | 'filter10') => performance.find((p) => p.data.model === model && p.data.strategy === strategy);
+const runsOf = (model: string) => days.flatMap((d) => d.data.models).filter((m) => m.model === model);
+// Each model's own ledger start. Models added later start later: cards are grouped by start date so that a
+// cumulative since 11.06 is never set next to one since 11.27 as if they covered the same period.
+const startOf = (model: string) => {
+  const p = perf(model, 'base');
+  if (p?.data.startDate) return isoDay(p.data.startDate);
+  return runsOf(model).find((m) => m.strategy?.base?.startDate)?.strategy?.base?.startDate;
+};
+const roleOf = (model: string) => perf(model, 'base')?.data.role ?? runsOf(model).find((m) => m.role)?.role;
+const groups = [...new Set(models.map(startOf))].sort((a, b) => (a ?? '9999').localeCompare(b ?? '9999')).map((start) => ({
+  start,
+  models: models.filter((m) => startOf(m) === start).sort((a, b) => Number(roleOf(b) === 'operating') - Number(roleOf(a) === 'operating')),
+}));
 const nameOf = (model: string) => {
   const p = performance.find((x) => x.data.model === model);
   if (p?.data.label) return p.data.label;
@@ -41,11 +55,13 @@ const md = (d?: Date) => (d ? isoDay(d).slice(5).replace('-', '.') : '');
         <div><dt>{STRATEGY_LABEL.base}</dt><dd>모델의 1순위 추천을 매수합니다.</dd></div>
         <div><dt>{STRATEGY_LABEL.filter10}</dt><dd>같은 1순위 추천이 {FILTER_SCORE}점 이상일 때만 매수합니다. {FILTER_SCORE}점은 매수 조건이며, {FILTER_SCORE}점 미만 추천도 모두 공개합니다.</dd></div>
       </dl>
-      {models.length > 0 ? (
+      {models.length > 0 ? groups.map((group) => (
+        <div class="perf-group">
+          <h3 class="group-h">평가 시작 {monthDay(group.start) ?? '미상'} <small>· {group.models.length}개 모델{groups.length > 1 && ' · 시작일이 같은 모델끼리만 같은 기간 비교입니다'}</small></h3>
         <div class="perf">
-          {models.map((model) => (
+          {group.models.map((model) => (
             <div class="perf-model">
-              <h3>{nameOf(model)} <small>{model}</small></h3>
+              <h3>{nameOf(model)} {roleOf(model) && <span class:list={['role', roleOf(model)]}>{roleOf(model) === 'operating' ? '운영' : '비교용 모의 운용'}</span>} <small>{model}</small></h3>
               <ul>
                 {(['base', 'filter10'] as const).map((key) => {
                   const p = perf(model, key);
@@ -54,8 +70,19 @@ const md = (d?: Date) => (d ? isoDay(d).slice(5).replace('-', '.') : '');
                       <span class="perf-name">{STRATEGY_LABEL[key]}</span>
                       {p ? (
                         <span class="perf-val">
-                          <strong>{formatPct(p.data.cumulativePct)}</strong>
+                          {isPct(p.data.cumulativePct)
+                            ? <strong>{formatPct(p.data.cumulativePct)}</strong>
+                            : <strong class="pending">미완료</strong>}
+                          {!isPct(p.data.cumulativePct) && p.data.cumulativePending && <small class="warn">{p.data.cumulativePending}</small>}
                           <small>누적 {p.data.startDate ? `${md(p.data.startDate)}~` : ''}{md(p.data.asOf)} 기준{p.data.tradingDays !== undefined && ` · 거래일 ${p.data.tradingDays}`}{p.data.trades !== undefined && ` · 모의 매수 ${p.data.trades}회`}</small>
+                          {p.data.exposures && (
+                            <span class="exposures" aria-label="노출별 누적">
+                              {EXPOSURES.map((e) => {
+                                const v = p.data.exposures?.[e.key]?.cumulativePct;
+                                return <span><small>{e.label}</small> <b class:list={[{ up: isPct(v) && v > 0, down: isPct(v) && v < 0 }]}>{isPct(v) ? formatPct(v) : '미완료'}</b></span>;
+                              })}
+                            </span>
+                          )}
                           {p.data.includesProvisional.length > 0 && <small class="warn">잠정 종가 포함: {p.data.includesProvisional.map((d) => d.slice(5).replace('-', '.')).join(', ')} (다음 거래일 확정)</small>}
                           {p.data.unverifiedCorrections.length > 0 && <small class="warn">KRX 공식 미대조 정정 종가 포함: {p.data.unverifiedCorrections.map((d) => d.slice(5).replace('-', '.')).join(', ')}</small>}
                           <small>{p.data.basis} · 출처 {p.data.source}</small>
@@ -70,7 +97,8 @@ const md = (d?: Date) => (d ? isoDay(d).slice(5).replace('-', '.') : '');
             </div>
           ))}
         </div>
-      ) : <p class="empty">기록이 생기면 모델별로 표시합니다.</p>}
+        </div>
+      )) : <p class="empty">기록이 생기면 모델별로 표시합니다.</p>}
     </section>
 
     <section id="records" class="block" aria-labelledby="records-h">
@@ -129,6 +157,15 @@ const md = (d?: Date) => (d ? isoDay(d).slice(5).replace('-', '.') : '');
   .rules { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem 2rem; margin: 1.25rem 0; }
   .rules dt { font-weight: 700; }
   .rules dd { margin: .2rem 0 0; color: var(--muted); font-size: .92rem; }
+  .perf-group + .perf-group { margin-top: 1.75rem; }
+  .group-h { margin: 0 0 .75rem; font: 700 1rem var(--display); }
+  .group-h small { color: var(--faint); font: 500 .8rem var(--body); }
+  .role { margin-left: .35rem; padding: 0 .4rem; border: 1px solid var(--line-strong); border-radius: 4px; color: var(--muted); font: 600 .7rem var(--body); }
+  .role.operating { border-color: var(--text); color: var(--text); }
+  .exposures { display: flex; flex-wrap: wrap; gap: .2rem .9rem; font-variant-numeric: tabular-nums; }
+  .exposures small { color: var(--faint); }
+  .exposures b.up { color: #FF7A6E; }
+  .exposures b.down { color: #7FA6FF; }
   .perf { display: grid; gap: 1rem; }
   .perf-model h3 { margin: 0 0 .4rem; font: 700 .9rem var(--body); }
   .perf-model h3 small { color: var(--faint); font-weight: 500; }

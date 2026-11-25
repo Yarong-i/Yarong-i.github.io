@@ -155,6 +155,11 @@ const priceResult = z.object({
   basis: z.string().optional(),
   note: z.string().optional(),
 });
+// A figure the research system could not compute yet (a missing open or close) is null with its reason in
+// dayPending / cumPending - shown as 미완료, never as 0, cash or an earlier cumulative.
+const pctOrNull = z.number().nullable().optional();
+// Per exposure ("1.0" = 100%, "0.5" = 50%, "0.3" = 30% of the day's starting equity in the first choice).
+const exposureDay = z.object({ dayPct: pctOrNull, cumPct: pctOrNull });
 // One day of a mock strategy as the research system published it that day (its ledger), never computed here.
 // executed = the research system's own record that the mock buy happened (not the rule check on this site).
 const strategyDay = z.object({
@@ -163,8 +168,11 @@ const strategyDay = z.object({
   detail: z.string().optional(),
   ticker: z.string().optional(),
   name: z.string().optional(),
-  dayPct: z.number().optional(),
-  cumPct: z.number().optional(),
+  dayPct: pctOrNull,
+  cumPct: pctOrNull,
+  dayPending: z.string().optional(),
+  cumPending: z.string().optional(),
+  exposures: z.record(z.string(), exposureDay).optional(),
   asOf: z.string(),
   startDate: z.string().optional(),
   // false: that day's close was provisional when published (confirmed on the next trading day).
@@ -242,11 +250,17 @@ const performance = defineCollection({
     model: z.string(),
     label: z.string().optional(),
     short: z.string().optional(),
+    role: z.enum(['operating', 'comparison']).optional(),
     strategy: z.enum(['base', 'filter10']),
     asOf: z.coerce.date(),
+    // The model's own first ledger day. Models with different start dates are not a same-period comparison.
     startDate: z.coerce.date().optional(),
-    cumulativePct: z.number(),
-    dayPct: z.number().optional(),
+    // null: not computable yet (a missing price inside the period); cumulativePending says which day and why.
+    cumulativePct: z.number().nullable(),
+    dayPct: z.number().nullable().optional(),
+    cumulativePending: z.string().optional(),
+    dayPending: z.string().optional(),
+    exposures: z.record(z.string(), z.object({ cumulativePct: pctOrNull, dayPct: pctOrNull })).optional(),
     tradingDays: z.number().int().nonnegative().optional(),
     trades: z.number().int().nonnegative().optional(),
     // Days whose provisional close is inside the cumulative figure, and corrected closes not yet KRX-confirmed.

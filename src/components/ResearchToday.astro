@@ -16,7 +16,11 @@ const parts = day ? Object.fromEntries(new Intl.DateTimeFormat('ko-KR', { timeZo
 const href = day ? `/research/${day.id}/` : '/research';
 const anyRanked = day?.data.models.some((m) => m.premarket.picks.some((p) => p.finalRank !== undefined || p.rank !== undefined));
 const strategies = day?.data.models.map((m) => m.strategy?.base).filter((s) => s !== undefined) ?? [];
-const startDate = strategies[0]?.startDate ?? performance.find((p) => p.data.startDate)?.data.startDate?.toISOString().slice(0, 10);
+// Models added later have their own start date. One start for the table only when every model shares it;
+// otherwise each 누적 cell names its own period (start~as of), so different periods are never read as one.
+const starts = [...new Set(strategies.map((s) => s.startDate).filter((d): d is string => Boolean(d)))];
+const startDate = starts.length === 1 ? starts[0]
+  : starts.length === 0 ? performance.find((p) => p.data.startDate)?.data.startDate?.toISOString().slice(0, 10) : undefined;
 const short = (d?: string) => (d ? d.slice(5).replace('-', '.') : undefined);
 ---
 <div class="today" data-research-today data-date={iso}>
@@ -35,7 +39,7 @@ const short = (d?: string) => (d ? d.slice(5).replace('-', '.') : undefined);
 
   {day && day.data.market === 'open' && day.data.models.length > 0 && (
     <>
-      <p class="perf-label"><strong>기본 1순위 전략 · 모의 성과</strong>{startDate && <span>누적 시작 {short(startDate)}</span>}<span>비용 전 · 실제 주문 아님</span></p>
+      <p class="perf-label"><strong>기본 1순위 전략 · 모의 성과</strong>{startDate ? <span>누적 시작 {short(startDate)}</span> : starts.length > 1 && <span>누적 시작일이 모델마다 달라 누적은 각자 기간(시작~기준일)입니다</span>}<span>비용 전 · 실제 주문 아님</span></p>
       <table class="picks">
         <caption class="sr-only">{iso} 모델별 추천과 기본 1순위 전략 모의 성과</caption>
         <thead><tr><th scope="col">모델</th><th scope="col">추천 종목</th><th scope="col" class="num">점수</th><th scope="col" class="num">하루</th><th scope="col" class="num">누적</th></tr></thead>
@@ -54,6 +58,7 @@ const short = (d?: string) => (d ? d.slice(5).replace('-', '.') : undefined);
             <th scope="rowgroup" rowspan={rows} class="model">
               <span class="mname">{displayName(run, true)}</span>
               {run.role === 'comparison' && <span class="role">비교</span>}
+              {run.role === 'operating' && <span class="role operating">운영</span>}
               {sent && <small>{premarketState(run).key === 'withheld' ? '안내' : '발표'} {sent}</small>}
             </th>
           );
@@ -124,6 +129,7 @@ const short = (d?: string) => (d ? d.slice(5).replace('-', '.') : undefined);
   .model { width: 6.5rem; padding-right: .75rem; text-align: left; }
   .mname { font: 700 .9rem/1.25 var(--body); overflow-wrap: anywhere; }
   .role { display: inline-block; margin-left: .3rem; vertical-align: .1em; padding: 0 .35rem; border: 1px solid var(--line-strong); border-radius: 4px; color: var(--muted); font: 600 .68rem var(--body); }
+  .role.operating { border-color: var(--text); color: var(--text); }
   .model small { display: block; margin-top: .15rem; color: var(--faint); font: 500 .74rem var(--body); }
   .stock a { display: inline-flex; flex-direction: column; gap: .05rem; }
   .stock a:hover .name, .stock a:focus-visible .name { text-decoration: underline; text-underline-offset: 3px; }
