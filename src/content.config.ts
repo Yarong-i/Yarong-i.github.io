@@ -189,6 +189,10 @@ const modelRun = z.object({
     detail: z.string().optional(),
     // The research system's rank check, e.g. 모델 순위 확인 / 모델 선호 순위 없음 - 1순위 판단 불가.
     rankStatus: z.string().optional(),
+    // Why a failed premarket published nothing, from the research system's own check result (never inferred from
+    // an announcement time or an empty pick list). EVIDENCE_ALL_EXCLUDED: every proposal was dropped by the
+    // evidence checks (see `excluded` for each reason) - shown as 추천 미발행, not 실행 실패 and not 추천 없음.
+    reasonCode: z.enum(['EVIDENCE_ALL_EXCLUDED']).optional(),
     picks: z.array(pick).default([]),
     // Proposals the research system's checks dropped, with its reason. Not recommendations.
     excluded: z.array(z.object({ ticker: z.string(), name: z.string().optional(), reason: z.string().optional(),

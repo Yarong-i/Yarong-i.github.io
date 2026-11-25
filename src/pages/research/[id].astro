@@ -1,7 +1,7 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import {
-  FILTER_SCORE, POSTMARKET_LABEL, PREMARKET_LABEL, STRATEGY_LABEL,
+  FILTER_SCORE, POSTMARKET_LABEL, premarketState, STRATEGY_LABEL,
   displayName, executedText, formatPct, formatResearchDate, formatStamp, getResearchDays, modelSlug, openToClose,
   resultFor, strategyDecisions, type ResearchDay,
 } from '../../utils/research';
@@ -41,19 +41,23 @@ const shortDay = (iso?: string) => (iso ? iso.slice(5).replace('-', '.') : '');
 
     {data.models.map((run) => {
       const decisions = strategyDecisions(run);
+      const state = premarketState(run);
       const slug = modelSlug(run.model);
       return (
         <section id={slug} class="model" aria-labelledby={`${slug}-h`}>
           <header class="model-head">
             <h2 id={`${slug}-h`}>{displayName(run)}{run.role && <span class="role">{run.role === 'operating' ? '운영' : '비교용 모의 운용'}</span>}</h2>
             <p class="sessions">
-              <span data-status={run.premarket.status}>장전 {PREMARKET_LABEL[run.premarket.status]}{run.premarket.publishedAt && ` · ${formatStamp(run.premarket.publishedAt)}`}</span>
+              <span data-status={state.key}>장전 {state.label}{run.premarket.publishedAt && ` · ${formatStamp(run.premarket.publishedAt)}`}</span>
               <span data-status={run.postmarket.status}>{POSTMARKET_LABEL[run.postmarket.status]}{run.postmarket.publishedAt && ` · ${formatStamp(run.postmarket.publishedAt)}`}</span>
             </p>
           </header>
           <p class="model-id">모델 {run.model}{run.premarket.rankStatus && ` · ${run.premarket.rankStatus}`}</p>
 
-          {run.premarket.detail && <p class="detail">{run.premarket.detail}</p>}
+          {/* 추천 미발행: the reason from the research system's check result; the generic run text it was stored
+              with ("실행 실패") is kept in the record but not shown, so the two are never confused. */}
+          {state.note ? <p class="detail">{state.label} · {state.note}. 제외된 제안은 추천이 아니며, 아래에 연구 시스템의 제외 사유를 그대로 둡니다.</p>
+            : run.premarket.detail && <p class="detail">{run.premarket.detail}</p>}
 
           {run.premarket.picks.length > 0 && (
             <ol class="picks">

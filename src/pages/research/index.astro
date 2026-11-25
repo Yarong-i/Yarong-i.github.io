@@ -2,7 +2,7 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import ResearchToday from '../../components/ResearchToday.astro';
 import {
-  FILTER_SCORE, POSTMARKET_LABEL, PREMARKET_LABEL, STRATEGY_LABEL,
+  FILTER_SCORE, POSTMARKET_LABEL, premarketState, STRATEGY_LABEL,
   displayName, formatPct, formatResearchDate, formatStamp, getPerformance, getResearchDays, isoDay, modelSlug, modelsIn,
 } from '../../utils/research';
 const days = await getResearchDays();
@@ -89,10 +89,10 @@ const md = (d?: Date) => (d ? isoDay(d).slice(5).replace('-', '.') : '');
                         <span class="picks">
                           {run.premarket.status === 'published'
                             ? run.premarket.picks.map((p) => <span class="pick">{p.name} <small>{p.ticker}</small> <b>{p.score !== undefined ? `${p.score}점` : '점수 없음'}</b></span>)
-                            : <span class:list={['state', run.premarket.status]}>{PREMARKET_LABEL[run.premarket.status]}</span>}
+                            : <span class:list={['state', premarketState(run).key]}>{premarketState(run).label}{premarketState(run).note && <small class="state-note"> · {premarketState(run).note}</small>}</span>}
                         </span>
                         <span class="sessions">
-                          <span>장전 {run.premarket.publishedAt ? formatStamp(run.premarket.publishedAt, false) : PREMARKET_LABEL[run.premarket.status]}</span>
+                          <span>장전 {run.premarket.publishedAt ? formatStamp(run.premarket.publishedAt, false) : premarketState(run).label}</span>
                           <span>{POSTMARKET_LABEL[run.postmarket.status]}</span>
                         </span>
                       </a>
@@ -157,6 +157,8 @@ const md = (d?: Date) => (d ? isoDay(d).slice(5).replace('-', '.') : '');
   .state { color: var(--muted); }
   .state.failed { color: #FF7A6E; }
   .state.pending { color: #F5C451; }
+  .state.withheld { color: var(--text); }
+  .state-note { color: var(--muted); font-weight: 500; }
   .sessions { display: flex; gap: .75rem; color: var(--faint); font-size: .8rem; white-space: nowrap; }
   .past ul { display: flex; flex-wrap: wrap; gap: 1rem 2.5rem; margin: 1.25rem 0 0; padding: 0; list-style: none; }
   @media (max-width: 860px) {

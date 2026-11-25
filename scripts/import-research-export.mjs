@@ -12,6 +12,12 @@
 //   announced: status published, an announcement time on that trading day (KST), the same PREMARKET run id(s) and
 //   the same picks. Having picks is not enough. The failed version is kept in premarketHistory and the change is
 //   named in the day's corrections (previous state, when it was corrected, why). Anything else is warned and kept.
+// - A failed premarket whose proposals were ALL dropped by the research system's evidence checks carries
+//   reasonCode EVIDENCE_ALL_EXCLUDED (shown as 추천 미발행, not 실행 실패 and not 추천 없음). It is set only from
+//   the source's own check result: the export's reasonCode, or its ranking status '제안 종목 모두 근거 점검 미통과',
+//   together with no picks and every dropped proposal listed with its reason. An announcement time or an empty
+//   pick list alone never sets it. A stored record that lacks it gets it once, when the export states the same
+//   premarket; the earlier version is kept in premarketHistory and the day's corrections say why.
 // - Postmarket and the day's strategy figures follow the research system's CURRENT statement of the day: filled
 //   when pending, replaced when their values change (provisional close confirmed - same price too, its status and
 //   source change -, corrected close, day restated after a later correction, a corrected early review). The
@@ -91,6 +97,16 @@ function recoveryBlock(entry, pre, runs, date, recordRuns) {
   if (!(entry.premarket.picks ?? []).length || !same(core(entry.premarket).picks, core(pre).picks)) return 'picks differ';
   return undefined;
 }
+// The research system's ranking status for a run whose every proposal failed the evidence checks.
+const ALL_EXCLUDED_RANK_STATUS = '제안 종목 모두 근거 점검 미통과';
+function allExcluded(pre) {
+  if (pre.status !== 'failed' || (pre.picks ?? []).length) return false;
+  const ex = pre.excluded ?? [];
+  if (!ex.length || !ex.every((x) => x.reason)) return false;
+  return pre.reasonCode === 'EVIDENCE_ALL_EXCLUDED' || pre.rankStatus === ALL_EXCLUDED_RANK_STATUS;
+}
+const withReason = (pre) => (allExcluded(pre) && !pre.reasonCode ? { ...pre, reasonCode: 'EVIDENCE_ALL_EXCLUDED' } : pre);
+const excludedCore = (pre) => (pre.excluded ?? []).map(({ ticker, reason }) => ({ ticker, reason }));
 const write = (target, data) => { if (!dryRun) fs.writeFileSync(target, `${JSON.stringify(data, null, 2)}\n`, 'utf8'); };
 const stats = { added: 0, updated: 0, unchanged: 0, warnings: 0, perf: 0 };
 const warn = (msg) => { stats.warnings += 1; console.warn(`warn  ${msg}`); };
@@ -107,7 +123,8 @@ for (const day of exp.days) {
   const dayChanges = [];
 
   for (const m of day.models) {
-    const { premarket, postmarket, strategy, runs = [], ...meta } = m;
+    const { premarket: sourcePre, postmarket, strategy, runs = [], ...meta } = m;
+    const premarket = withReason(sourcePre);
     // Same model id, or the same source run (a record made before per-model run ids were kept).
     let entry = record.models.find((x) => x.model === m.model)
       ?? record.models.find((x) => runs.some((r) => (x.runs?.length ? x.runs : record.source.runs).includes(r) && r.startsWith('PREMARKET-')));
@@ -141,6 +158,22 @@ for (const day of exp.days) {
     }
     else if (!same(core(entry.premarket), core(premarket))) warn(`${day.date} ${m.model}: export premarket differs from the stored record; kept the stored one`
       + (block !== 'n/a' ? ` (not recovered: ${block})` : ''));
+    // A stored failed premarket without its reason code, where the export states the same premarket (same status,
+    // time, picks and dropped proposals) with the all-excluded check result: add the code once, keep the earlier
+    // version, name the change. Picks, dropped proposals, postmarket and figures are not touched.
+    if (entry.premarket.status === 'failed' && !entry.premarket.reasonCode && premarket.reasonCode === 'EVIDENCE_ALL_EXCLUDED'
+        && allExcluded(entry.premarket) && same(core(entry.premarket), core(premarket))
+        && same(excludedCore(entry.premarket), excludedCore(premarket))) {
+      const old = entry.premarket;
+      entry.premarketHistory ??= [];
+      entry.premarketHistory.push({ replacedAt: now, reason: 'reason-code-added', premarket: old });
+      entry.premarket = { ...old, reasonCode: 'EVIDENCE_ALL_EXCLUDED' };
+      const n = old.excluded.length;
+      dayChanges.push({ at: now, ticker: `${m.model}:premarket-reason`,
+        note: `${m.short ?? m.model} 장전 상태 설명 보강: 실행 실패 → 추천 미발행(근거 검증 실패 · 제안 ${n}종목 모두 제외). `
+          + `근거: 연구 시스템 기록 '${old.rankStatus ?? ALL_EXCLUDED_RANK_STATUS}'와 종목별 제외 사유 ${n}건. 제외 종목·사유와 장후 기록은 바뀌지 않았습니다.` });
+      notes.push(`${m.short}:premarket reason`);
+    }
     // An export that does not say published for a premarket stored as published (e.g. an older 'failed' export)
     // also derives its postmarket from that state ('nothing'); none of it is applied.
     const rejected = entry.premarket.status === 'published' && premarket.status !== 'published';

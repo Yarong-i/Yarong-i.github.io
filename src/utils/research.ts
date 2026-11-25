@@ -12,6 +12,20 @@ export const PREMARKET_LABEL: Record<ModelRun['premarket']['status'], string> = 
   'no-picks': '추천 없음',
   failed: '실행 실패',
 };
+/**
+ * The premarket state shown everywhere (Home, date list, detail, strategy rule). A failed run is 추천 미발행 only
+ * when the record carries the research system's reason code for it; otherwise it stays 실행 실패. 추천 없음 is
+ * only the research system's own no-picks status.
+ */
+export type PremarketKey = ModelRun['premarket']['status'] | 'withheld';
+export function premarketState(run: ModelRun): { key: PremarketKey; label: string; note?: string } {
+  const pre = run.premarket;
+  if (pre.status === 'failed' && pre.reasonCode === 'EVIDENCE_ALL_EXCLUDED') {
+    const n = pre.excluded.length;
+    return { key: 'withheld', label: '추천 미발행', note: n > 0 ? `근거 검증 실패 · 제안 ${n}종목 모두 제외` : '근거 검증 실패' };
+  }
+  return { key: pre.status, label: PREMARKET_LABEL[pre.status] };
+}
 export const POSTMARKET_LABEL: Record<ModelRun['postmarket']['status'], string> = {
   pending: '장후 대기',
   reviewed: '장후 반영',
@@ -103,7 +117,7 @@ export function strategyDecisions(run: ModelRun): { base: StrategyDecision; filt
   const status = run.premarket.status;
   if (status === 'pending') return { base: { buys: undefined, text: '발표 대기' }, filter10: { buys: undefined, text: '발표 대기' } };
   if (status !== 'published') {
-    const text = status === 'failed' ? '매수 없음 (실행 실패)' : '매수 없음 (추천 없음)';
+    const text = `매수 없음 (${premarketState(run).label})`;
     return { base: { buys: false, text }, filter10: { buys: false, text } };
   }
   const first = firstRanked(run);

@@ -41,6 +41,10 @@ Importer rules:
   results from `src/content/performance/*.json` (`model`, `strategy: base|filter10`, `asOf`, `cumulativePct`,
   `trades?`, `days?`, `basis`, `source`). Without them the site shows 미연동.
 - Statuses: premarket `pending` (발표 대기) · `published` · `no-picks` (정상 실행, 추천 없음) · `failed` (실행 실패);
+  a `failed` premarket with `reasonCode: "EVIDENCE_ALL_EXCLUDED"` is 추천 미발행 ("근거 검증 실패 · 제안 N종목 모두
+  제외"): the research system dropped every proposal in its evidence checks (`excluded` keeps each one and its
+  reason; they are not recommendations). The code comes only from the source's check result, never from an
+  announcement time or an empty pick list (`premarketState` in src/utils/research.ts is the one place it is read);
   postmarket `pending` · `reviewed` · `nothing` · `failed`; a day with `market: "closed"` is 휴장.
 
 ## Checking with fixtures

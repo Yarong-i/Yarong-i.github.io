@@ -54,6 +54,13 @@ Target: a recommendation sent around 08:30 is public within a few minutes, befor
   sent message yet 발표 대기 ("발송 확인을 기다리고 있습니다", picks not published) until the send deadline plus
   the late grace, and 실행 실패 only after that. (This export change was prepared on 2026-11-24 while the server
   was unreachable; until it is installed there, the importer rule above repairs such a record on the next export.)
+- A failed premarket whose every proposal was dropped by the evidence checks gets `reasonCode:
+  EVIDENCE_ALL_EXCLUDED` (shown as 추천 미발행): from the export's own reasonCode, or from its ranking status
+  '제안 종목 모두 근거 점검 미통과' with no picks and every dropped proposal listed with its reason. A stored record
+  without it (2026-11-25 Sonnet, PREMARKET-118) gets it once when the export states the same premarket; the
+  earlier version stays in `premarketHistory` and the change is added to the day's 정정 이력. The server export
+  change that sends the code itself was prepared on 2026-11-25 (deploy/158, not in this repository) but not
+  installed: the server refused the SSH key that day.
 - Postmarket and a day's strategy figures follow the research system's current statement of that day: a
   provisional close confirmed (same price: its status and source change), a corrected close, a day restated
   after a later correction. The replaced version stays in the record's `postmarketHistory` with `replacedAt`,

@@ -6,7 +6,7 @@
 // A stock's open→close change is never put in their place. Models are never mixed across trading days.
 import type { Performance, ResearchDay } from '../utils/research';
 import {
-  PREMARKET_LABEL, displayName, formatStamp, homePicks, isoDay, latestPerformance, modelSlug, strategyCells,
+  premarketState, displayName, formatStamp, homePicks, isoDay, latestPerformance, modelSlug, strategyCells,
 } from '../utils/research';
 interface Props { day?: ResearchDay; performance?: Performance[]; }
 const { day, performance = [] } = Astro.props;
@@ -54,7 +54,7 @@ const short = (d?: string) => (d ? d.slice(5).replace('-', '.') : undefined);
             <th scope="rowgroup" rowspan={rows} class="model">
               <span class="mname">{displayName(run, true)}</span>
               {run.role === 'comparison' && <span class="role">비교</span>}
-              {sent && <small>발표 {sent}</small>}
+              {sent && <small>{premarketState(run).key === 'withheld' ? '안내' : '발표'} {sent}</small>}
             </th>
           );
           return (
@@ -67,9 +67,9 @@ const short = (d?: string) => (d ? d.slice(5).replace('-', '.') : undefined);
                   {i === 0 && perfCells}
                 </tr>
               )) : (
-                <tr class="status-row" data-status={run.premarket.status}>
+                <tr class="status-row" data-status={premarketState(run).key}>
                   {modelCell}
-                  <td class="stock" colspan="2"><a href={link}><strong>{PREMARKET_LABEL[run.premarket.status]}</strong></a></td>
+                  <td class="stock" colspan="2"><a href={link}><strong>{premarketState(run).label}</strong>{premarketState(run).note && <small class="state-note">{premarketState(run).note}</small>}</a></td>
                   {perfCells}
                 </tr>
               )}
@@ -141,6 +141,8 @@ const short = (d?: string) => (d ? d.slice(5).replace('-', '.') : undefined);
   .status-row[data-status='failed'] strong { color: #FF7A6E; }
   .status-row[data-status='pending'] strong { color: #F5C451; }
   .status-row[data-status='no-picks'] strong { color: var(--muted); }
+  .status-row[data-status='withheld'] strong { color: var(--text); }
+  .state-note { display: block; margin-top: .15rem; color: var(--muted); font: 500 .78rem/1.4 var(--body); }
 
   /* Narrow: the model becomes the group title; stock · score on one line, 하루 · 누적 on the next. */
   @container (max-width: 30rem) {
