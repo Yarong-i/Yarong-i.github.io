@@ -139,7 +139,7 @@ const short = (d?: string) => (d ? d.slice(5).replace('-', '.') : undefined);
   .score small { margin-left: .1rem; color: var(--muted); font: 500 .72rem var(--body); }
   .muted { color: var(--faint); font: 500 .78rem var(--body); }
   .perf .v { display: block; font: 700 .98rem/1.25 var(--body); }
-  .perf small { display: block; color: var(--faint); font: 500 .7rem var(--body); }
+  .perf small { display: block; max-width: 12rem; white-space: normal; overflow-wrap: anywhere; color: var(--faint); font: 500 .7rem var(--body); }
   .perf.up .v { color: #FF7A6E; }
   .perf.down .v { color: #7FA6FF; }
   .perf.none .v { color: var(--muted); font-weight: 600; font-size: .85rem; }
@@ -161,7 +161,7 @@ const short = (d?: string) => (d ? d.slice(5).replace('-', '.') : undefined);
     .stock { padding-top: .1rem !important; }
     .stock a { flex-direction: row; align-items: baseline; flex-wrap: wrap; column-gap: .45rem; }
     .score { align-self: center; }
-    .perf { display: flex; align-items: baseline; gap: .4rem; justify-content: flex-start; margin-top: .35rem; text-align: left; }
+    .perf { display: flex; flex-wrap: wrap; align-items: baseline; gap: .4rem; justify-content: flex-start; margin-top: .35rem; text-align: left; }
     .perf::before { content: attr(data-label); color: var(--faint); font: 600 .74rem var(--body); }
     .perf small { display: inline; }
     .perf + .perf { justify-content: flex-end; }

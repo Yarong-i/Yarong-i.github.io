@@ -167,6 +167,13 @@ const tone = (v: number): PerfCell['tone'] => (v > 0 ? 'up' : v < 0 ? 'down' : '
  */
 export function strategyCells(run: ModelRun, latest?: Performance): { day: PerfCell; cum: PerfCell } {
   const s = run.strategy?.base;
+  // Only attach ledger qualifications to the matching snapshot; never borrow a later period's flags.
+  const matchingLedger = latest && (!s || s.asOf === isoDay(latest.data.asOf)) ? latest.data : undefined;
+  const qualifications = [
+    matchingLedger?.includesProvisional.length ? `잠정 종가 포함: ${matchingLedger.includesProvisional.map(shortDay).join(', ')}` : undefined,
+    matchingLedger?.unverifiedCorrections.length ? `KRX 공식 미대조 정정 종가 포함: ${matchingLedger.unverifiedCorrections.map(shortDay).join(', ')}` : undefined,
+  ].filter(Boolean).join(' · ');
+  const qualify = (note: string) => [note, qualifications].filter(Boolean).join(' · ');
   if (s) {
     // The period is the model's own: a model added later starts later, so its cumulative names its start.
     const period = `${s.startDate ? `${shortDay(s.startDate)}~` : ''}${shortDay(s.asOf)}`;
@@ -174,7 +181,7 @@ export function strategyCells(run: ModelRun, latest?: Performance): { day: PerfC
       ? { text: formatPct(s.dayPct), tone: tone(s.dayPct), note: !s.executed ? '현금' : s.final ? undefined : '잠정' }
       : s.dayPending ? { text: '미완료', tone: 'none', note: '가격 확정 대기' } : { text: '미확인', tone: 'none' };
     const cum: PerfCell = isPct(s.cumPct)
-      ? { text: formatPct(s.cumPct), tone: tone(s.cumPct), note: `${period}${s.final ? '' : ' · 잠정 포함'}` }
+      ? { text: formatPct(s.cumPct), tone: tone(s.cumPct), note: qualify(`${period}${s.final ? '' : ' · 잠정 포함'}`) }
       : s.cumPending ? { text: '미완료', tone: 'none', note: `${period} · 가격 확정 대기` } : { text: '미확인', tone: 'none' };
     return { day, cum };
   }
@@ -182,7 +189,7 @@ export function strategyCells(run: ModelRun, latest?: Performance): { day: PerfC
     const v = latest.data.cumulativePct;
     const period = `${latest.data.startDate ? `${monthDay(latest.data.startDate)}~` : ''}${shortDay(isoDay(latest.data.asOf))}`;
     return { day: { text: '장후 대기', tone: 'none' },
-      cum: isPct(v) ? { text: formatPct(v), tone: tone(v), note: period } : { text: '미완료', tone: 'none', note: `${period} · 가격 확정 대기` } };
+      cum: isPct(v) ? { text: formatPct(v), tone: tone(v), note: qualify(period) } : { text: '미완료', tone: 'none', note: `${period} · 가격 확정 대기` } };
   }
   return { day: { text: '미연동', tone: 'none' }, cum: { text: '미연동', tone: 'none' } };
 }

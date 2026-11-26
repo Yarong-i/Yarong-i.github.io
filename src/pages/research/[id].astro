@@ -140,7 +140,7 @@ const shortDay = (iso?: string) => (iso ? iso.slice(5).replace('-', '.') : '');
             {run.strategy?.base && !run.strategy.base.final && (
               <p class="provisional-note">이날 당일 값은 잠정 종가로 계산한 값입니다. 다음 거래일에 종가가 확정되면 종가·당일·누적 값이 확정 값으로 갱신되고, 바뀐 내용과 시각은 정정 이력에 남습니다.</p>
             )}
-            <p class="basis">매수 조건은 이 페이지의 규칙 확인이고, 모의 매수와 수익률은 연구 시스템 장부의 확정 값입니다. {FILTER_SCORE}점은 필터 전략의 매수 조건일 뿐 추천 공개 여부와는 관계없습니다. 비용 전 · 실제 주문 아님.</p>
+            <p class="basis">매수 조건은 이 페이지의 규칙 확인이고, 모의 매수와 수익률은 연구 시스템 장부의 기록입니다. 잠정 값과 확인 상태는 각 항목에 표시합니다. {FILTER_SCORE}점은 필터 전략의 매수 조건일 뿐 추천 공개 여부와는 관계없습니다. 비용 전 · 실제 주문 아님.</p>
           </div>
         </section>
       );

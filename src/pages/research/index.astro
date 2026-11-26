@@ -43,7 +43,7 @@ const md = (d?: Date) => (d ? isoDay(d).slice(5).replace('-', '.') : '');
         <ol>
           <li><b>장전</b> 모델마다 추천 종목과 점수를 발표합니다. 점수와 관계없이 모든 추천을 공개합니다.</li>
           <li><b>장후</b> 같은 날짜에 정규장 시가·종가를 더합니다. 시가→종가는 종목 등락률입니다.</li>
-          <li><b>전략</b> 모의 전략 성과는 연구 시스템이 확정한 값만 옮깁니다.</li>
+          <li><b>전략</b> 모의 전략 성과는 연구 시스템 장부의 값을 옮기며, 잠정 값과 확인 상태를 함께 표시합니다.</li>
         </ol>
         <p class="note">개인 연구 기록이며 투자 권유가 아닙니다. 확인되지 않은 값은 0으로 채우지 않습니다.</p>
       </div>
@@ -88,7 +88,7 @@ const md = (d?: Date) => (d ? isoDay(d).slice(5).replace('-', '.') : '');
                           <small>{p.data.basis} · 출처 {p.data.source}</small>
                         </span>
                       ) : (
-                        <span class="perf-val"><strong class="pending">미연동</strong><small>연구 시스템의 확정 성과가 아직 연결되지 않았습니다.</small></span>
+                        <span class="perf-val"><strong class="pending">미연동</strong><small>연구 시스템의 전략 성과가 아직 연결되지 않았습니다.</small></span>
                       )}
                     </li>
                   );
@@ -137,7 +137,7 @@ const md = (d?: Date) => (d ? isoDay(d).slice(5).replace('-', '.') : '');
     </section>
 
     <section class="block past">
-      <div class="section-head"><h2>지난 연구 프로젝트</h2></div>
+      <div class="section-head"><h2>관련 연구 프로젝트</h2></div>
       <ul>
         <li><a class="arrow-link" href="/projects/stock-strategy-bot/">주식 전략 연구</a></li>
         <li><a class="arrow-link" href="/projects/local-alpha-agent/">Local / Autonomous Alpha Agent</a></li>
