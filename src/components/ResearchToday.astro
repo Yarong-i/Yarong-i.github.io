@@ -6,7 +6,7 @@
 // A stock's open→close change is never put in their place. Models are never mixed across trading days.
 import type { Performance, ResearchDay } from '../utils/research';
 import {
-  premarketState, displayName, formatStamp, homePicks, isoDay, latestPerformance, modelSlug, strategyCells,
+  premarketState, formatStamp, homePicks, isoDay, latestPerformance, modelSlug, strategyCells, tableNames,
 } from '../utils/research';
 interface Props { day?: ResearchDay; performance?: Performance[]; }
 const { day, performance = [] } = Astro.props;
@@ -22,6 +22,13 @@ const starts = [...new Set(strategies.map((s) => s.startDate).filter((d): d is s
 const startDate = starts.length === 1 ? starts[0]
   : starts.length === 0 ? performance.find((p) => p.data.startDate)?.data.startDate?.toISOString().slice(0, 10) : undefined;
 const short = (d?: string) => (d ? d.slice(5).replace('-', '.') : undefined);
+const runs = day?.data.models ?? [];
+const names = tableNames(runs);
+const cellsOf = new Map(runs.map((run) => [run.model, strategyCells(run, latestPerformance(performance, run.model))]));
+// 성과 기준 보기: each model's own period and the source's flags (only when the source states them).
+const anyProvisional = [...cellsOf.values()].some((c) => c.basis.provisional.length > 0);
+const anyUnverified = [...cellsOf.values()].some((c) => c.basis.unverified.length > 0);
+const dates = (list: string[]) => list.map((d) => short(d)).join(', ');
 ---
 <div class="today" data-research-today data-date={iso}>
   <div class="head">
@@ -39,27 +46,31 @@ const short = (d?: string) => (d ? d.slice(5).replace('-', '.') : undefined);
 
   {day && day.data.market === 'open' && day.data.models.length > 0 && (
     <>
-      <p class="perf-label"><strong>기본 1순위 전략 · 모의 성과</strong>{startDate ? <span>누적 시작 {short(startDate)}</span> : starts.length > 1 && <span>누적 시작일이 모델마다 달라 누적은 각자 기간(시작~기준일)입니다</span>}<span>비용 전 · 실제 주문 아님</span></p>
+      <p class="perf-label"><strong>기본 1순위 전략 · 모의 성과</strong>{startDate ? <span>누적 시작 {short(startDate)}</span> : starts.length > 1 && <span>누적 기간은 모델별</span>}<span>비용 전 · 실제 주문 아님</span></p>
       <table class="picks">
         <caption class="sr-only">{iso} 모델별 추천과 기본 1순위 전략 모의 성과</caption>
-        <thead><tr><th scope="col">모델</th><th scope="col">추천 종목</th><th scope="col" class="num">점수</th><th scope="col" class="num">하루</th><th scope="col" class="num">누적</th></tr></thead>
+        <thead><tr><th scope="col">모델</th><th scope="col">추천 종목</th><th scope="col" class="num c-score">점수</th><th scope="col" class="num c-day">하루</th><th scope="col" class="num c-cum">누적</th></tr></thead>
         {day.data.models.map((run) => {
           const picks = homePicks(run);
           const rows = Math.max(picks.length, 1);
           const link = `${href}#${modelSlug(run.model)}`;
           const sent = formatStamp(run.premarket.publishedAt, false);
-          const cells = strategyCells(run, latestPerformance(performance, run.model));
+          const cells = cellsOf.get(run.model)!;
           const perfCells = [cells.day, cells.cum].map((c, i) => (
             <td rowspan={rows} class:list={['num', 'perf', c.tone]} data-label={i === 0 ? '하루' : '누적'}>
-              <span class="v">{c.text}</span>{c.note && <small>{c.note}</small>}
+              <span class="v">{c.text}{c.note && <small class="note">{c.note}</small>}</span>
+              {c.period && <small class="period">{c.period}</small>}
+              {c.flags && c.flags.length > 0 && <small class="flags">{c.flags.join(' · ')}</small>}
             </td>
           ));
           const modelCell = (
             <th scope="rowgroup" rowspan={rows} class="model">
-              <span class="mname">{displayName(run, true)}</span>
-              {run.role === 'comparison' && <span class="role">비교</span>}
-              {run.role === 'operating' && <span class="role operating">운영</span>}
-              {sent && <small>{premarketState(run).key === 'withheld' ? '안내' : '발표'} {sent}</small>}
+              <span class="mname">{names.get(run.model)}</span>
+              <span class="mmeta">
+                {run.role === 'comparison' && <span class="role">비교</span>}
+                {run.role === 'operating' && <span class="role operating">운영</span>}
+                {sent && <small>{premarketState(run).key === 'withheld' ? '안내' : '발표'} {sent}</small>}
+              </span>
             </th>
           );
           return (
@@ -82,6 +93,34 @@ const short = (d?: string) => (d ? d.slice(5).replace('-', '.') : undefined);
           );
         })}
       </table>
+      <details class="basis">
+        <summary>성과 기준 보기</summary>
+        <div class="basis-body">
+          <p>누적은 모델마다 자기 시작일부터 기준일까지의 기본 1순위 전략 모의 성과입니다. 시작일이 다른 모델의 누적은 같은 기간의 결과가 아니며, 수익률 순위를 매기지 않습니다.</p>
+          <dl>
+            {runs.map((run) => {
+              const b = cellsOf.get(run.model)!.basis;
+              return (
+                <div>
+                  <dt>{names.get(run.model)}</dt>
+                  <dd>
+                    <span>누적 기간 {b.period ?? '집계 전'}</span>
+                    {b.provisional.length > 0 && <span>잠정 종가 포함일 {dates(b.provisional)}</span>}
+                    {b.unverified.length > 0 && <span>KRX 공식 미대조 정정 종가 포함일 {dates(b.unverified)}</span>}
+                    {b.period && b.provisional.length === 0 && b.unverified.length === 0 && <span>잠정·미대조 표시 없음</span>}
+                  </dd>
+                </div>
+              );
+            })}
+          </dl>
+          {(anyProvisional || anyUnverified) && (
+            <ul class="terms">
+              {anyProvisional && <li><strong>잠정 포함</strong> 다음 거래일에 확정될 종가로 계산한 날이 누적에 들어 있습니다. 확정되면 값이 갱신되고 정정 이력에 남습니다.</li>}
+              {anyUnverified && <li><strong>미대조 포함</strong> 정정한 종가 중 KRX 공식 자료와 아직 대조하지 않은 값이 누적에 들어 있습니다.</li>}
+            </ul>
+          )}
+        </div>
+      </details>
       <p class="foot">
         {anyRanked ? '모델별 최종 1순위만 보입니다. 전체 추천과 10점 필터 전략 비교는 상세 기록에 있습니다.' : '이날은 원본에 순위가 없어 모든 추천을 보여 줍니다.'}
         {' '}점수는 연구 시스템의 선별 점수이며 10점 미만도 모두 공개합니다. 수익률은 종목 등락률이 아니라 기본 1순위 전략의 모의 성과입니다.
@@ -126,11 +165,16 @@ const short = (d?: string) => (d ? d.slice(5).replace('-', '.') : undefined);
   tbody { border-bottom: 1px solid var(--line); }
   th, td { padding: .55rem 0; vertical-align: top; }
   .num { padding-left: .75rem; text-align: right; white-space: nowrap; }
-  .model { width: 6.5rem; padding-right: .75rem; text-align: left; }
-  .mname { font: 700 .9rem/1.25 var(--body); overflow-wrap: anywhere; }
-  .role { display: inline-block; margin-left: .3rem; vertical-align: .1em; padding: 0 .35rem; border: 1px solid var(--line-strong); border-radius: 4px; color: var(--muted); font: 600 .68rem var(--body); }
+  /* Five models: the name column fits a versioned name (GPT-6.2 Astra) on one or two lines; numbers keep their size. */
+  .model { width: 7.6rem; padding-right: .75rem; text-align: left; }
+  .mname { display: block; font: 700 .92rem/1.25 var(--body); overflow-wrap: break-word; }
+  .mmeta { display: flex; flex-wrap: wrap; align-items: center; gap: .2rem .4rem; margin-top: .2rem; }
+  thead th.c-score { width: 3.2rem; }
+  thead th.c-day { width: 5.4rem; }
+  thead th.c-cum { width: 6.8rem; }
+  .role { display: inline-block; padding: 0 .35rem; border: 1px solid var(--line-strong); border-radius: 4px; color: var(--muted); font: 600 .72rem/1.35 var(--body); }
   .role.operating { border-color: var(--text); color: var(--text); }
-  .model small { display: block; margin-top: .15rem; color: var(--faint); font: 500 .74rem var(--body); }
+  .model small { color: var(--faint); font: 500 .74rem var(--body); }
   .stock a { display: inline-flex; flex-direction: column; gap: .05rem; }
   .stock a:hover .name, .stock a:focus-visible .name { text-decoration: underline; text-underline-offset: 3px; }
   .name { font: 700 1.05rem/1.25 var(--display); letter-spacing: -.02em; }
@@ -139,7 +183,9 @@ const short = (d?: string) => (d ? d.slice(5).replace('-', '.') : undefined);
   .score small { margin-left: .1rem; color: var(--muted); font: 500 .72rem var(--body); }
   .muted { color: var(--faint); font: 500 .78rem var(--body); }
   .perf .v { display: block; font: 700 .98rem/1.25 var(--body); }
-  .perf small { display: block; max-width: 12rem; white-space: normal; overflow-wrap: anywhere; color: var(--faint); font: 500 .7rem var(--body); }
+  .perf .note { margin-left: .3rem; color: var(--faint); font: 600 .72rem var(--body); }
+  .perf .period, .perf .flags { display: block; margin-top: .1rem; white-space: nowrap; color: var(--faint); font: 500 .74rem/1.3 var(--body); }
+  .perf .flags { color: var(--muted); font-weight: 600; }
   .perf.up .v { color: #FF7A6E; }
   .perf.down .v { color: #7FA6FF; }
   .perf.none .v { color: var(--muted); font-weight: 600; font-size: .85rem; }
@@ -154,18 +200,45 @@ const short = (d?: string) => (d ? d.slice(5).replace('-', '.') : undefined);
   @container (max-width: 30rem) {
     .picks thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
     .picks tbody, .picks tr { display: grid; }
-    .picks tr { grid-template-columns: minmax(0, 1fr) auto; column-gap: 1rem; padding-bottom: .55rem; }
+    /* Four equal tracks: stock 3 + score 1 on the first line, 하루 2 + 누적 2 on the next. Fixed shares, so a long
+       status under one number never squeezes the stock name. */
+    .picks tr { grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: .75rem; padding-bottom: .55rem; }
+    .picks td.stock { grid-column: span 3; }
+    .picks td.score { grid-column: span 1; justify-self: end; }
+    .picks td.perf { grid-column: span 2; }
     .picks th, .picks td { padding: 0; }
-    .model { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: baseline; gap: .1rem .5rem; width: auto; padding: .65rem 0 .35rem !important; }
-    .model small { display: inline; margin: 0; }
+    .model { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: .1rem .6rem; width: auto; padding: .65rem 0 .35rem !important; }
+    .mmeta { margin: 0; }
     .stock { padding-top: .1rem !important; }
     .stock a { flex-direction: row; align-items: baseline; flex-wrap: wrap; column-gap: .45rem; }
     .score { align-self: center; }
-    .perf { display: flex; flex-wrap: wrap; align-items: baseline; gap: .4rem; justify-content: flex-start; margin-top: .35rem; text-align: left; }
+    /* 하루 and 누적 side by side under the stock, each with its label; period and flags wrap under the value. */
+    .perf { display: flex; flex-wrap: wrap; align-content: flex-start; align-items: baseline; gap: .1rem .4rem; margin-top: .45rem; text-align: left; }
     .perf::before { content: attr(data-label); color: var(--faint); font: 600 .74rem var(--body); }
-    .perf small { display: inline; }
-    .perf + .perf { justify-content: flex-end; }
-    .status-row .stock { grid-column: 1 / -1; }
+    .perf .v { display: inline; }
+    .perf .period, .perf .flags { flex-basis: 100%; margin: 0; white-space: normal; }
+    .perf + .perf { justify-content: flex-end; text-align: right; }
+    .picks .status-row td.stock { grid-column: 1 / -1; }
+  }
+  /* 성과 기준 보기: closed by default; a plain ruled disclosure, no card. */
+  .basis { border-block: 1px solid var(--line); }
+  .basis summary { display: flex; align-items: center; gap: .45rem; min-height: 2.75rem; cursor: pointer; color: var(--muted); font: 700 .84rem var(--body); list-style: none; }
+  .basis summary::-webkit-details-marker { display: none; }
+  .basis summary { -webkit-tap-highlight-color: transparent; }
+  .basis summary:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+  .basis summary::before { content: '+'; display: inline-grid; place-items: center; width: 1.1rem; color: var(--faint); font: 700 1rem/1 var(--body); }
+  .basis[open] summary::before { content: '−'; }
+  .basis summary:hover, .basis summary:focus-visible { color: var(--text); }
+  .basis-body { display: grid; gap: .6rem; padding: 0 0 .85rem; color: var(--muted); font-size: .82rem; line-height: 1.55; }
+  .basis-body p { margin: 0; }
+  .basis dl { display: grid; gap: .35rem; margin: 0; }
+  .basis dl div { display: grid; grid-template-columns: 7.6rem minmax(0, 1fr); gap: .1rem .75rem; }
+  .basis dt { color: var(--text); font-weight: 700; }
+  .basis dd { display: flex; flex-wrap: wrap; gap: 0 .8rem; margin: 0; }
+  .terms { display: grid; gap: .3rem; margin: 0; padding: 0; list-style: none; }
+  .terms strong { margin-right: .35rem; color: var(--text); }
+  @container (max-width: 30rem) {
+    .basis dl div { grid-template-columns: minmax(0, 1fr); }
   }
   .links { display: flex; flex-wrap: wrap; gap: .25rem 1.25rem; margin: 0; }
   .go { display: inline-flex; align-items: center; gap: .35rem; min-height: 2.75rem; font: 700 .92rem var(--body); }

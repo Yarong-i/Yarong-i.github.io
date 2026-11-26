@@ -1,0 +1,13 @@
+{
+  "model": "QA-gpt-6.2-astra",
+  "strategy": "base",
+  "asOf": "2030-03-11",
+  "startDate": "2030-03-11",
+  "cumulativePct": 2.5,
+  "includesProvisional": [
+    "2030-03-11"
+  ],
+  "unverifiedCorrections": [],
+  "basis": "검증용 산식 설명",
+  "source": "QA-FIXTURE"
+}

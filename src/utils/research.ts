@@ -157,23 +157,33 @@ export function executedText(run: ModelRun, key: StrategyKey): string {
 
 const shortDay = (iso: string) => iso.slice(5).replace('-', '.');
 
-export interface PerfCell { text: string; note?: string; tone: 'up' | 'down' | 'flat' | 'none'; }
+export interface PerfCell {
+  text: string;
+  tone: 'up' | 'down' | 'flat' | 'none';
+  /** Short state next to the value: 잠정 / 현금 / 가격 확정 대기. */
+  note?: string;
+  /** The model's own cumulative period, start~as of (shown with every cumulative). */
+  period?: string;
+  /** Short source flags shown under the cumulative: 잠정 포함 / 미대조 포함. */
+  flags?: string[];
+}
+/** What 성과 기준 보기 lists for one model: its own period and the source's flags with their dates. */
+export interface PerfBasis { period?: string; provisional: string[]; unverified: string[]; }
 const tone = (v: number): PerfCell['tone'] => (v > 0 ? 'up' : v < 0 ? 'down' : 'flat');
 
 /**
  * Main-table cells for one model on one trading day, all from the research system's base strategy:
  * the day's own ledger snapshot when it exists; otherwise 장후 대기 for the day and the latest published
- * cumulative with its real as-of date; 미연동 when there is no strategy data at all.
+ * cumulative with its real as-of date; 집계 전 when the model has no strategy figures yet (e.g. a model added later).
+ * Flags come only from this model's own figures for the same as-of date: a later or earlier snapshot's flags and
+ * another model's flags are never borrowed.
  */
-export function strategyCells(run: ModelRun, latest?: Performance): { day: PerfCell; cum: PerfCell } {
+export function strategyCells(run: ModelRun, latest?: Performance): { day: PerfCell; cum: PerfCell; basis: PerfBasis } {
   const s = run.strategy?.base;
-  // Only attach ledger qualifications to the matching snapshot; never borrow a later period's flags.
   const matchingLedger = latest && (!s || s.asOf === isoDay(latest.data.asOf)) ? latest.data : undefined;
-  const qualifications = [
-    matchingLedger?.includesProvisional.length ? `잠정 종가 포함: ${matchingLedger.includesProvisional.map(shortDay).join(', ')}` : undefined,
-    matchingLedger?.unverifiedCorrections.length ? `KRX 공식 미대조 정정 종가 포함: ${matchingLedger.unverifiedCorrections.map(shortDay).join(', ')}` : undefined,
-  ].filter(Boolean).join(' · ');
-  const qualify = (note: string) => [note, qualifications].filter(Boolean).join(' · ');
+  const provisional = [...new Set([...(matchingLedger?.includesProvisional ?? []), ...(s && s.final === false ? [s.asOf] : [])])].sort();
+  const unverified = [...(matchingLedger?.unverifiedCorrections ?? [])].sort();
+  const flags = [provisional.length ? '잠정 포함' : undefined, unverified.length ? '미대조 포함' : undefined].filter((x): x is string => Boolean(x));
   if (s) {
     // The period is the model's own: a model added later starts later, so its cumulative names its start.
     const period = `${s.startDate ? `${shortDay(s.startDate)}~` : ''}${shortDay(s.asOf)}`;
@@ -181,17 +191,32 @@ export function strategyCells(run: ModelRun, latest?: Performance): { day: PerfC
       ? { text: formatPct(s.dayPct), tone: tone(s.dayPct), note: !s.executed ? '현금' : s.final ? undefined : '잠정' }
       : s.dayPending ? { text: '미완료', tone: 'none', note: '가격 확정 대기' } : { text: '미확인', tone: 'none' };
     const cum: PerfCell = isPct(s.cumPct)
-      ? { text: formatPct(s.cumPct), tone: tone(s.cumPct), note: qualify(`${period}${s.final ? '' : ' · 잠정 포함'}`) }
-      : s.cumPending ? { text: '미완료', tone: 'none', note: `${period} · 가격 확정 대기` } : { text: '미확인', tone: 'none' };
-    return { day, cum };
+      ? { text: formatPct(s.cumPct), tone: tone(s.cumPct), period, flags }
+      : s.cumPending ? { text: '미완료', tone: 'none', period, note: '가격 확정 대기' } : { text: '미확인', tone: 'none', period };
+    return { day, cum, basis: { period, provisional, unverified } };
   }
   if (latest) {
     const v = latest.data.cumulativePct;
     const period = `${latest.data.startDate ? `${monthDay(latest.data.startDate)}~` : ''}${shortDay(isoDay(latest.data.asOf))}`;
     return { day: { text: '장후 대기', tone: 'none' },
-      cum: isPct(v) ? { text: formatPct(v), tone: tone(v), note: qualify(period) } : { text: '미완료', tone: 'none', note: `${period} · 가격 확정 대기` } };
+      cum: isPct(v) ? { text: formatPct(v), tone: tone(v), period, flags } : { text: '미완료', tone: 'none', period, note: '가격 확정 대기' },
+      basis: { period, provisional, unverified } };
   }
-  return { day: { text: '미연동', tone: 'none' }, cum: { text: '미연동', tone: 'none' } };
+  const waiting = run.postmarket.status === 'pending';
+  return { day: { text: waiting ? '장후 대기' : '집계 전', tone: 'none' }, cum: { text: '집계 전', tone: 'none' }, basis: { provisional: [], unverified: [] } };
+}
+
+/**
+ * Names on Home: the short name, except where two models share it (Astra / Astra 6.2), where each shows its full
+ * label so the versions are told apart (GPT-6 Astra / GPT-6.2 Astra). A role note in parentheses is dropped (the
+ * role has its own mark).
+ */
+export function tableNames(runs: ModelRun[]): Map<string, string> {
+  const first = (r: ModelRun): string => (r.short ?? r.label ?? r.model).split(/\s+/)[0] ?? r.model;
+  const counts = new Map<string, number>();
+  for (const r of runs) counts.set(first(r), (counts.get(first(r)) ?? 0) + 1);
+  return new Map(runs.map((r) => [r.model, (counts.get(first(r))! > 1 ? (r.label ?? r.short ?? r.model) : (r.short ?? r.label ?? r.model))
+    .replace(/\s*\([^)]*\)\s*$/, '')]));
 }
 
 export const latestPerformance = (perf: Performance[], model: string, key: StrategyKey = 'base') =>

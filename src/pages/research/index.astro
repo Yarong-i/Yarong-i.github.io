@@ -4,8 +4,7 @@ import ResearchToday from '../../components/ResearchToday.astro';
 import {
   EXPOSURES, FILTER_SCORE, POSTMARKET_LABEL, premarketState, STRATEGY_LABEL,
   displayName, formatPct, formatResearchDate, formatStamp, getPerformance, getResearchDays, isoDay, isPct, modelSlug, modelsIn,
-  monthDay,
-} from '../../utils/research';
+  monthDay, tableNames } from '../../utils/research';
 const days = await getResearchDays();
 const performance = await getPerformance();
 const models = modelsIn(days);
@@ -113,7 +112,7 @@ const md = (d?: Date) => (d ? isoDay(d).slice(5).replace('-', '.') : '');
                   {d.data.models.map((run) => (
                     <li>
                       <a href={`/research/${d.id}/#${modelSlug(run.model)}`}>
-                        <span class="model">{displayName(run, true)}</span>
+                        <span class="model">{tableNames(d.data.models).get(run.model)}</span>
                         <span class="picks">
                           {run.premarket.status === 'published'
                             ? run.premarket.picks.map((p) => <span class="pick">{p.name} <small>{p.ticker}</small> <b>{p.score !== undefined ? `${p.score}점` : '점수 없음'}</b></span>)

@@ -1,0 +1,16 @@
+{
+  "model": "QA-sonnet-5",
+  "strategy": "base",
+  "asOf": "2030-03-11",
+  "startDate": "2030-03-02",
+  "cumulativePct": 12.34,
+  "includesProvisional": [
+    "2030-03-10",
+    "2030-03-11"
+  ],
+  "unverifiedCorrections": [
+    "2030-03-05"
+  ],
+  "basis": "검증용 산식 설명",
+  "source": "QA-FIXTURE"
+}

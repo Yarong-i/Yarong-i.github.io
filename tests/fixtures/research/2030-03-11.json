@@ -1,0 +1,309 @@
+{
+  "date": "2030-03-11",
+  "market": "open",
+  "registeredAt": "2030-03-11T08:40:00+09:00",
+  "updatedAt": "2030-03-11T16:05:00+09:00",
+  "corrections": [],
+  "source": {
+    "system": "QA-FIXTURE",
+    "runs": [
+      "QA-PRE-1",
+      "QA-PRE-2",
+      "QA-PRE-3",
+      "QA-PRE-4",
+      "QA-PRE-5"
+    ],
+    "origins": [
+      "QA-FIXTURE"
+    ]
+  },
+  "models": [
+    {
+      "model": "QA-sonnet-5",
+      "label": "QA Sonnet 5 (운영)",
+      "short": "QA Sonnet",
+      "role": "operating",
+      "runs": [
+        "QA-PRE-1"
+      ],
+      "premarket": {
+        "status": "published",
+        "publishedAt": "2030-03-10T23:29:00+00:00",
+        "rankStatus": "모델 순위 확인",
+        "picks": [
+          {
+            "order": 1,
+            "ticker": "900011",
+            "name": "검증종목 초장문이름 홀딩스 인터내셔널",
+            "score": 9,
+            "rank": 1,
+            "finalRank": 1,
+            "reasons": [
+              "[검증용] 검증종목 초장문이름 홀딩스 인터내셔널 선정 이유 예시"
+            ],
+            "risks": [
+              "[검증용] 검증종목 초장문이름 홀딩스 인터내셔널 위험 예시"
+            ],
+            "changeConditions": [
+              "[검증용] 검증종목 초장문이름 홀딩스 인터내셔널 판단 변경 조건 예시"
+            ]
+          },
+          {
+            "order": 2,
+            "ticker": "900012",
+            "name": "검증종목나",
+            "score": 12,
+            "rank": 2,
+            "finalRank": 2,
+            "reasons": [
+              "[검증용] 검증종목나 선정 이유 예시"
+            ],
+            "risks": [
+              "[검증용] 검증종목나 위험 예시"
+            ],
+            "changeConditions": [
+              "[검증용] 검증종목나 판단 변경 조건 예시"
+            ]
+          }
+        ],
+        "excluded": []
+      },
+      "postmarket": {
+        "status": "reviewed",
+        "publishedAt": "2030-03-11T06:45:00+00:00",
+        "results": [
+          {
+            "ticker": "900011",
+            "name": "검증종목 초장문이름 홀딩스 인터내셔널",
+            "status": "provisional",
+            "open": 10000,
+            "close": 10123,
+            "basis": "[검증용] 정규장 시가→종가"
+          }
+        ]
+      },
+      "strategy": {
+        "base": {
+          "executed": true,
+          "asOf": "2030-03-11",
+          "startDate": "2030-03-02",
+          "final": false,
+          "dayPct": 1.23,
+          "cumPct": 12.34,
+          "ticker": "900011",
+          "name": "검증종목 초장문이름 홀딩스 인터내셔널",
+          "category": "PICK"
+        }
+      }
+    },
+    {
+      "model": "QA-opus-5-5",
+      "label": "QA Opus 5.5",
+      "short": "QA Opus",
+      "role": "comparison",
+      "runs": [
+        "QA-PRE-2"
+      ],
+      "premarket": {
+        "status": "published",
+        "publishedAt": "2030-03-10T23:30:00+00:00",
+        "rankStatus": "모델 순위 확인",
+        "picks": [
+          {
+            "order": 1,
+            "ticker": "900011",
+            "name": "검증종목 초장문이름 홀딩스 인터내셔널",
+            "score": 9,
+            "rank": 1,
+            "finalRank": 1,
+            "reasons": [
+              "[검증용] 검증종목 초장문이름 홀딩스 인터내셔널 선정 이유 예시"
+            ],
+            "risks": [
+              "[검증용] 검증종목 초장문이름 홀딩스 인터내셔널 위험 예시"
+            ],
+            "changeConditions": [
+              "[검증용] 검증종목 초장문이름 홀딩스 인터내셔널 판단 변경 조건 예시"
+            ]
+          }
+        ],
+        "excluded": []
+      },
+      "postmarket": {
+        "status": "reviewed",
+        "publishedAt": "2030-03-11T06:45:00+00:00",
+        "results": [
+          {
+            "ticker": "900011",
+            "name": "검증종목 초장문이름 홀딩스 인터내셔널",
+            "status": "confirmed",
+            "open": 10000,
+            "close": 9950,
+            "basis": "[검증용] 정규장 시가→종가"
+          }
+        ]
+      },
+      "strategy": {
+        "base": {
+          "executed": true,
+          "asOf": "2030-03-11",
+          "startDate": "2030-03-02",
+          "final": true,
+          "dayPct": -0.5,
+          "cumPct": 3.1,
+          "ticker": "900011",
+          "name": "검증종목 초장문이름 홀딩스 인터내셔널",
+          "category": "PICK"
+        }
+      }
+    },
+    {
+      "model": "QA-gpt-6-astra",
+      "label": "QA GPT-6 Astra",
+      "short": "QA Astra",
+      "role": "comparison",
+      "runs": [
+        "QA-PRE-3"
+      ],
+      "premarket": {
+        "status": "failed",
+        "publishedAt": "2030-03-10T23:31:00+00:00",
+        "detail": "실행 실패",
+        "reasonCode": "EVIDENCE_ALL_EXCLUDED",
+        "rankStatus": "제안 종목 모두 근거 점검 미통과",
+        "picks": [],
+        "excluded": [
+          {
+            "ticker": "900013",
+            "name": "검증종목다",
+            "reason": "[검증용] 새 공시 인용 없음",
+            "rank": 1,
+            "score": 6
+          },
+          {
+            "ticker": "900014",
+            "name": "검증종목라",
+            "reason": "[검증용] 가격 이후 자료 사용",
+            "rank": 2,
+            "score": 4
+          }
+        ]
+      },
+      "postmarket": {
+        "status": "nothing",
+        "results": []
+      },
+      "strategy": {
+        "base": {
+          "executed": false,
+          "asOf": "2030-03-11",
+          "startDate": "2030-03-02",
+          "final": true,
+          "dayPct": 0.0,
+          "cumPct": -8.2,
+          "detail": "현금 유지",
+          "category": "NONE"
+        }
+      }
+    },
+    {
+      "model": "QA-fable-5-2",
+      "label": "QA Fable 5.2",
+      "short": "QA Fable",
+      "role": "comparison",
+      "runs": [
+        "QA-PRE-4"
+      ],
+      "premarket": {
+        "status": "published",
+        "publishedAt": "2030-03-10T23:32:00+00:00",
+        "rankStatus": "모델 순위 확인",
+        "picks": [
+          {
+            "order": 1,
+            "ticker": "900015",
+            "name": "검증종목마",
+            "score": 4,
+            "rank": 1,
+            "finalRank": 1,
+            "reasons": [
+              "[검증용] 검증종목마 선정 이유 예시"
+            ],
+            "risks": [
+              "[검증용] 검증종목마 위험 예시"
+            ],
+            "changeConditions": [
+              "[검증용] 검증종목마 판단 변경 조건 예시"
+            ]
+          }
+        ],
+        "excluded": []
+      },
+      "postmarket": {
+        "status": "pending",
+        "results": []
+      }
+    },
+    {
+      "model": "QA-gpt-6.2-astra",
+      "label": "QA GPT-6.2 Astra",
+      "short": "QA Astra 6.2",
+      "role": "comparison",
+      "runs": [
+        "QA-PRE-5"
+      ],
+      "premarket": {
+        "status": "published",
+        "publishedAt": "2030-03-10T23:33:00+00:00",
+        "rankStatus": "모델 순위 확인",
+        "picks": [
+          {
+            "order": 1,
+            "ticker": "900011",
+            "name": "검증종목 초장문이름 홀딩스 인터내셔널",
+            "score": 7,
+            "rank": 1,
+            "finalRank": 1,
+            "reasons": [
+              "[검증용] 검증종목 초장문이름 홀딩스 인터내셔널 선정 이유 예시"
+            ],
+            "risks": [
+              "[검증용] 검증종목 초장문이름 홀딩스 인터내셔널 위험 예시"
+            ],
+            "changeConditions": [
+              "[검증용] 검증종목 초장문이름 홀딩스 인터내셔널 판단 변경 조건 예시"
+            ]
+          }
+        ],
+        "excluded": []
+      },
+      "postmarket": {
+        "status": "reviewed",
+        "publishedAt": "2030-03-11T06:45:00+00:00",
+        "results": [
+          {
+            "ticker": "900011",
+            "name": "검증종목 초장문이름 홀딩스 인터내셔널",
+            "status": "provisional",
+            "open": 10000,
+            "close": 10250,
+            "basis": "[검증용] 정규장 시가→종가"
+          }
+        ]
+      },
+      "strategy": {
+        "base": {
+          "executed": true,
+          "asOf": "2030-03-11",
+          "startDate": "2030-03-11",
+          "final": false,
+          "dayPct": 2.5,
+          "cumPct": 2.5,
+          "ticker": "900011",
+          "name": "검증종목 초장문이름 홀딩스 인터내셔널",
+          "category": "PICK"
+        }
+      }
+    }
+  ]
+}
