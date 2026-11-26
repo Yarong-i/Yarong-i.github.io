@@ -26,6 +26,6 @@ if (targets.length && 'IntersectionObserver' in window && !reduced.matches) {
       entry.target.classList.add('is-in');
       observer.unobserve(entry.target);
     }
-  }, { rootMargin: '0px 0px -12% 0px' });
+  }, { rootMargin: '0px 0px -6% 0px' });
   targets.forEach((target) => observer.observe(target));
 }

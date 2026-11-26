@@ -15,6 +15,11 @@
   --accent: var(--text);
   --accent-ink: var(--bg);
   --focus: var(--text);
+  /* Showcase accents (Home): cyan, violet and gold light as r, g, b. Concentrated on the hero and the featured
+     projects; text stays white/grey on black so contrast never depends on them. */
+  --cyan: 64, 228, 222;
+  --violet: 162, 116, 255;
+  --gold: 255, 198, 96;
   /* Status colours: always paired with a text label, never decorative. */
   --alert: #FF5A4E;
   --progress: #6E8BFF;
@@ -121,9 +126,10 @@ img { display: block; max-width: 100%; }
    An animation (not a transition) is used so hover transitions on the same elements keep their own timing. */
 @media (prefers-reduced-motion: no-preference) {
   .reveal-ready [data-reveal]:not(.is-in) { opacity: 0; }
-  .reveal-ready [data-reveal].is-in { animation: rise-in var(--slow) var(--ease) calc(var(--i, 0) * 90ms) backwards; }
+  .reveal-ready [data-reveal].is-in { animation: rise-in 620ms var(--ease) calc(var(--i, 0) * 70ms) backwards; }
 }
-@keyframes rise-in { from { opacity: 0; transform: translateY(28px); } }
+/* A short rise: sections settle in without making the reader wait. */
+@keyframes rise-in { from { opacity: 0; transform: translateY(14px); } }
 
 @media (max-width: 800px) {
   .project-row { grid-template-columns: 2rem 1fr; gap: 1rem; }

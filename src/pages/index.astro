@@ -1,11 +1,11 @@
 ---
 import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
-import FeaturedProject from '../components/home/FeaturedProject.astro';
 import ResearchToday from '../components/ResearchToday.astro';
 import { getPerformance, getResearchDays } from '../utils/research';
 import { getFeed, FEED_LABEL, formatFeedDate } from '../utils/news';
 import { projectSummary, stageLabel } from '../utils/projects';
+import { CONTACT, mailto } from '../data/site';
 
 // Home visibility only: retain the coin research page and its entries in the project archive.
 const projects = (await getCollection('projects')).filter((p) => p.id !== 'coin-research');
@@ -16,10 +16,8 @@ const isResearch = (p: (typeof projects)[number]) => /연구|Finance/i.test(p.da
 const PAST = new Set(['paused', 'ended', 'finished']);
 const isPastResearch = (p: (typeof projects)[number]) => isResearch(p) && PAST.has(p.data.stage ?? '');
 const CURRENT = new Set(['live', 'operating', 'in-use', 'active']);
-// "개발·연구 중": projects with `wip`, in its order. They are shown only there, not again in "다른 프로젝트".
+// Projects with `wip` (in development) are shown in the project area, not again in "다른 프로젝트".
 const wip = projects.filter((p) => p.data.wip).sort((a, b) => a.data.wip!.order - b.data.wip!.order);
-// YAML reads 2026-11-22 as midnight UTC, so the date part of the ISO string is the date that was written.
-const wipUpdated = wip.map((p) => p.data.wip!.updated.toISOString().slice(0, 10)).sort().at(-1)?.replace(/-/g, '.');
 const shown = (p: (typeof projects)[number]) => p.data.featured !== undefined || p.data.wip !== undefined;
 // "다른 프로젝트": projects that set `home` (in that order), then current research that is not shown above.
 const others = [
@@ -34,90 +32,172 @@ const performance = await getPerformance();
 const feed = await getFeed(3);
 const game = featured.find((p) => p.data.media);
 const bot = featured.find((p) => !p.data.media);
+// The project in development shown next to the live game (2D 액션 게임), with its own real build screen.
+const dev = wip.find((p) => p.data.wip?.image);
+const devShot = dev ? dev.data.screens.find((x) => x.src === dev.data.wip!.image) : undefined;
+// The live game: its real factory screen leads its card; the official key art leads the hero.
+const gameShot = game?.data.screens[0];
+const gameMore = game?.data.screens.slice(1) ?? [];
+// Hero visual: only real images - the game's official key art and the 2D game's other real build screen.
+const heroBack = game?.data.media;
+const heroFront = dev?.data.screens.find((x) => x.src !== dev.data.wip!.image);
 // Secondary navigation for the feed: browse by topic.
 const topics: ReadonlyArray<readonly [string, string]> = [
   ['/projects/junk-factory/', '게임'], ['/projects/discord-economy-bot/', '봇'], ['/research', '주식 연구'], ['/archive', '전체 기록'],
 ];
 ---
 <BaseLayout title="YARONG — 게임, 봇, 주식 연구" description="Yarong이 만든 게임과 Discord 봇, 날마다 쌓는 주식 연구 기록, 바로 해 보는 반응속도 테스트.">
-  <div class="shell home">
-    <p class="intro">게임과 봇을 만들고, 주식을 연구하는 야롱입니다.</p>
-
-    <div class="bento">
-      {/* Left: the game to play. Right: today's research and the bot. */}
-      <div class="col col-left">
-        {game && <div class="area-lead"><FeaturedProject project={game} /></div>}
+  {/* Hero: the big line and real project images. The light behind it moves slowly (static under reduced motion). */}
+  <section class="hero" aria-labelledby="hero-h">
+    <div class="hero-light" aria-hidden="true"></div>
+    <div class="shell hero-in">
+      <div class="hero-text">
+        <p class="hero-kicker">YARONG · 게임 · 봇 · 주식 연구</p>
+        <h1 id="hero-h"><span>만들고, 실험하고,</span> <span>끝까지 <em>플레이</em>합니다.</span></h1>
+        <p class="hero-sub">게임과 봇을 만들고, 주식을 연구하는 야롱입니다.</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary glow-btn" href="/projects">프로젝트 보기 <span class="arrow" aria-hidden="true">↗</span></a>
+          <a class="btn btn-ghost" href="/portfolio">포트폴리오</a>
+        </div>
       </div>
-      <div class="col col-right">
-        <section class="area-stock" aria-label="오늘의 주식 연구">
-          <ResearchToday day={researchDays[0]} performance={performance} />
-        </section>
-        {bot && <div class="area-bot"><FeaturedProject project={bot} /></div>}
-      </div>
+      {heroBack && (
+        <div class="hero-visual">
+          <figure class="hv hv-back">
+            <img src={heroBack.poster} alt={heroBack.alt} width="1400" height="788" loading="eager" fetchpriority="high" decoding="async" />
+            <figcaption>{game!.data.title} · {heroBack.note ?? '대표 이미지'}</figcaption>
+          </figure>
+          {heroFront && (
+            <figure class="hv hv-front">
+              <img src={heroFront.src} alt={heroFront.alt} width={heroFront.width} height={heroFront.height} loading="eager" decoding="async" />
+              <figcaption>{dev!.data.title} · {heroFront.caption}</figcaption>
+            </figure>
+          )}
+        </div>
+      )}
     </div>
+  </section>
 
-    {wip.length > 0 && (
-      <section class="wip" aria-labelledby="wip-h">
-        <div class="wip-head">
-          <h2 id="wip-h">개발·연구 중</h2>
-          {wipUpdated && <span class="wip-date">{wipUpdated} 기준</span>}
-        </div>
-        <div class="wip-grid">
-          {wip.map((p) => {
-            const w = p.data.wip!;
-            const shot = w.image ? p.data.screens.find((x) => x.src === w.image) : undefined;
-            return (
-              <article class="wip-item" aria-labelledby={`wip-${p.id}`}>
-                <p class="wip-status">{w.status}</p>
-                <h3 id={`wip-${p.id}`}><a href={`/projects/${p.id}/`}>{p.data.title}</a></h3>
-                {shot ? (
-                  <a class="wip-shot" href={`/projects/${p.id}/`} tabindex="-1" aria-hidden="true">
-                    <img src={shot.src} alt="" width={shot.width} height={shot.height} loading="lazy" decoding="async" />
-                  </a>
-                ) : w.question && (
-                  <div class="wip-question"><span>핵심 질문</span><p>{w.question}</p></div>
-                )}
-                {shot && <p class="wip-caption">{shot.caption}</p>}
-                <p class="wip-summary">{projectSummary(p)}</p>
-                {w.now && <dl class="wip-now"><dt>현재 작업</dt><dd>{w.now}</dd></dl>}
-                <a class="go wip-link" href={`/projects/${p.id}/`}>소개 보기 <span aria-hidden="true">→</span></a>
-              </article>
-            );
-          })}
-        </div>
-      </section>
-    )}
+  {/* Projects: image-led, two sizes. The live game leads; the game in development sits beside it. */}
+  <section class="shell projects" aria-labelledby="projects-h">
+    <div class="sec-head">
+      <h2 id="projects-h">프로젝트</h2>
+      <span class="sec-mark" aria-hidden="true">PLAY / CREATE</span>
+      <a class="go" href="/projects">전체 프로젝트 <span aria-hidden="true">→</span></a>
+    </div>
+    <div class="show-grid">
+      {game && gameShot && (
+        <article class="show show-lead" aria-labelledby={`show-${game.id}`}>
+          <a class="show-img" href={gameShot.src} data-lightbox data-caption={gameShot.caption} data-alt={gameShot.alt} aria-label={`${gameShot.caption} — 크게 보기`}>
+            <img src={gameShot.src} alt={gameShot.alt} width={gameShot.width} height={gameShot.height} loading="eager" decoding="async" />
+            <span class="zoom" aria-hidden="true">크게 보기</span>
+          </a>
+          <div class="show-body">
+            <p class="chip chip-cyan">{stageLabel(game)}</p>
+            <h3 id={`show-${game.id}`}><a href={`/projects/${game.id}/`}>{game.data.title}</a>{game.data.alias && <small>{game.data.alias}</small>}</h3>
+            <p class="show-sum">{projectSummary(game)}</p>
+            {gameMore.length > 0 && (
+              <ul class="show-thumbs" aria-label={`${game.data.title} 실제 화면 더 보기`}>
+                {gameMore.map((x) => (
+                  <li><a href={x.src} data-lightbox data-caption={x.caption} data-alt={x.alt}>
+                    <img src={x.src} alt="" width={x.width} height={x.height} loading="lazy" decoding="async" />
+                    <span>{x.caption}</span><span class="sr-only"> 크게 보기</span>
+                  </a></li>
+                ))}
+              </ul>
+            )}
+            <div class="show-actions">
+              {game.data.playUrl && <a class="btn btn-primary glow-btn" href={game.data.playUrl} target="_blank" rel="noopener"><span class="tri" aria-hidden="true"></span>{game.data.playLabel ?? '플레이'}<span class="sr-only"> (새 창)</span></a>}
+              <a class="go" href={`/projects/${game.id}/`}>프로젝트 소개 <span aria-hidden="true">→</span></a>
+            </div>
+          </div>
+        </article>
+      )}
+      {dev && devShot && (
+        <article class="show show-dev" aria-labelledby={`show-${dev.id}`}>
+          <a class="show-img" href={devShot.src} data-lightbox data-caption={devShot.caption} data-alt={devShot.alt} aria-label={`${devShot.caption} — 크게 보기`}>
+            <img src={devShot.src} alt={devShot.alt} width={devShot.width} height={devShot.height} loading="eager" decoding="async" />
+            <span class="zoom" aria-hidden="true">크게 보기</span>
+          </a>
+          <div class="show-body">
+            <p class="chip chip-gold">{dev.data.wip!.status}</p>
+            <h3 id={`show-${dev.id}`}><a href={`/projects/${dev.id}/`}>{dev.data.title}</a></h3>
+            <p class="show-sum">{projectSummary(dev)}</p>
+            {dev.data.wip!.now && <p class="show-now"><span>현재 작업</span>{dev.data.wip!.now}</p>}
+            <p class="show-cap">{devShot.caption}</p>
+            <div class="show-actions">
+              <a class="go" href={`/projects/${dev.id}/`}>개발 이야기 <span aria-hidden="true">→</span></a>
+            </div>
+          </div>
+        </article>
+      )}
+    </div>
+  </section>
 
-    <section class="play" aria-labelledby="play-h">
+  {/* 롱야봇: a wide band with the description and its real Discord screens. */}
+  {bot && (
+    <section class="shell bot-band" aria-labelledby="bot-h" data-reveal>
+      <div class="bot-in">
+        <div class="bot-text">
+          <p class="chip chip-violet">{stageLabel(bot)} · Discord</p>
+          <h2 id="bot-h"><a href={`/projects/${bot.id}/`}>{bot.data.title}</a></h2>
+          <p class="bot-sum">{projectSummary(bot)}</p>
+          {bot.data.highlights.length > 0 && <ul class="bot-points" aria-label="대표 기능">{bot.data.highlights.map((h) => <li>{h}</li>)}</ul>}
+          {bot.data.notice && <p class="bot-note">{bot.data.notice}</p>}
+          <a class="go" href={`/projects/${bot.id}/`}>프로젝트 소개 <span aria-hidden="true">→</span></a>
+        </div>
+        {bot.data.screens.length > 0 && (
+          <ul class="bot-shots" aria-label={`${bot.data.title} 실제 사용 화면`}>
+            {bot.data.screens.map((x, i) => (
+              <li class:list={[{ main: i === 0 }]}>
+                <a href={x.src} data-lightbox data-caption={x.caption} data-alt={x.alt}>
+                  <img src={x.src} alt={x.alt} width={x.width} height={x.height} loading="lazy" decoding="async" />
+                  <span class="sr-only">크게 보기</span>
+                </a>
+                <span class="bot-cap">{x.caption}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </section>
+  )}
+
+  {/* 주식 연구: full width and calm - no glow, the table carries it. */}
+  <section class="shell research" aria-label="주식 연구" data-reveal>
+    <ResearchToday day={researchDays[0]} performance={performance} />
+  </section>
+
+  <section class="shell news" aria-labelledby="news-h" data-reveal>
+    <div class="news-head"><h2 id="news-h">최근 소식</h2><span class="news-sub">반영한 업데이트</span></div>
+    {feed.length > 0 ? (
+      <ol class="feed">
+        {feed.map((item) => (
+          <li>
+            <time datetime={item.date.toISOString().slice(0, 10)}>{formatFeedDate(item.date)}</time>
+            <span class="kind" data-kind={item.kind}>{FEED_LABEL[item.kind]}</span>
+            {item.href ? <a href={item.href}>{item.title}</a> : <span>{item.title}</span>}
+          </li>
+        ))}
+      </ol>
+    ) : <p class="empty-note">날짜가 확인된 소식이 생기면 여기에 모입니다.</p>}
+    <nav class="topics" aria-label="주제별로 보기">
+      <span class="topics-label">주제별</span>
+      {topics.map(([href, label]) => <a href={href}>{label}</a>)}
+    </nav>
+  </section>
+
+  <section class="shell play-wrap" aria-labelledby="play-h" data-reveal>
+    <div class="play">
       <span class="signal" aria-hidden="true"></span>
       <div class="play-text">
         <h2 id="play-h">반응속도 테스트</h2>
         <p>초록으로 바뀌는 순간 눌러 5번의 평균을 재 보세요.</p>
       </div>
       <a class="go play-link" href="/play/reaction">테스트하기 <span aria-hidden="true">→</span></a>
-    </section>
+    </div>
+  </section>
 
-    <section class="news" aria-labelledby="news-h">
-      <div class="news-head"><h2 id="news-h">최근 소식</h2><span class="news-sub">반영한 업데이트</span></div>
-      {feed.length > 0 ? (
-        <ol class="feed">
-          {feed.map((item) => (
-            <li>
-              <time datetime={item.date.toISOString().slice(0, 10)}>{formatFeedDate(item.date)}</time>
-              <span class="kind" data-kind={item.kind}>{FEED_LABEL[item.kind]}</span>
-              {item.href ? <a href={item.href}>{item.title}</a> : <span>{item.title}</span>}
-            </li>
-          ))}
-        </ol>
-      ) : <p class="empty-note">날짜가 확인된 소식이 생기면 여기에 모입니다.</p>}
-      <nav class="topics" aria-label="주제별로 보기">
-        <span class="topics-label">주제별</span>
-        {topics.map(([href, label]) => <a href={href}>{label}</a>)}
-      </nav>
-    </section>
-  </div>
-
-  <section class="shell more" aria-label="다른 프로젝트와 지난 연구">
+  <section class="shell more" aria-label="다른 프로젝트와 지난 연구" data-reveal>
     <div>
       <div class="more-head"><h2>다른 프로젝트</h2><a class="go" href="/projects">전체 <span aria-hidden="true">→</span></a></div>
       <ul class="plist">
@@ -132,7 +212,7 @@ const topics: ReadonlyArray<readonly [string, string]> = [
     </div>
     <div>
       <div class="more-head"><h2>지난 연구</h2><a class="go" href="/research">연구 기록 <span aria-hidden="true">→</span></a></div>
-      <ul class="plist research">
+      <ul class="plist research-list">
         {pastResearch.map((p) => (
           <li><a href={`/projects/${p.id}/`}>
             <strong>{p.data.title}</strong>
@@ -144,8 +224,9 @@ const topics: ReadonlyArray<readonly [string, string]> = [
     </div>
   </section>
 
-  <section class="shell contact" aria-labelledby="contact-h">
+  <section class="shell contact" aria-labelledby="contact-h" data-reveal>
     <h2 id="contact-h">같이 만들거나, 물어볼 게 있다면</h2>
+    <a class="contact-mail" href={mailto()}>{CONTACT.email}</a>
     <div class="contact-actions">
       <a class="btn btn-primary" href="/contact">문의하기 <span class="arrow" aria-hidden="true">→</span></a>
       <a class="btn btn-ghost" href="/portfolio">포트폴리오</a>
@@ -153,81 +234,136 @@ const topics: ReadonlyArray<readonly [string, string]> = [
   </section>
 </BaseLayout>
 <style>
-  .home { padding-top: clamp(.75rem, 2vw, 1.25rem); }
-  .intro { margin: 0 0 clamp(.9rem, 1.6vw, 1.25rem); color: var(--muted); font: 500 .95rem/1.4 var(--body); }
-  .kicker { margin: 0; color: var(--muted); font: 700 .78rem var(--body); letter-spacing: .06em; }
+  /* Showcase: black ground with cyan / violet / gold light. Effects are concentrated on the hero and the two
+     featured projects; the bot band gets a quiet edge, the research and everything below stay calm.
+     Under prefers-reduced-motion every movement stops (global rule) and the page is complete without it. */
+
+  /* Hero */
+  .hero { position: relative; isolation: isolate; overflow: hidden; padding: clamp(2rem, 5vw, 4.5rem) 0 clamp(2.5rem, 5vw, 4.5rem); }
+  .hero-light { position: absolute; inset: -20% -10% -10%; z-index: -1; pointer-events: none;
+    background:
+      radial-gradient(38rem 26rem at 18% 30%, rgba(var(--cyan), .16), transparent 70%),
+      radial-gradient(42rem 30rem at 78% 40%, rgba(var(--violet), .2), transparent 70%),
+      radial-gradient(30rem 18rem at 60% 95%, rgba(var(--gold), .08), transparent 70%);
+    /* Fades out before the section edge, so the light never ends in a visible band. */
+    -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent 92%); mask-image: linear-gradient(to bottom, #000 55%, transparent 92%);
+  }
+  @media (prefers-reduced-motion: no-preference) and (min-width: 761px) {
+    /* A slow drift of the light (no blinking): about 26 s each way. */
+    .hero-light { animation: drift 26s ease-in-out infinite alternate; will-change: transform; }
+  }
+  @keyframes drift { from { transform: translate3d(-2%, -1%, 0) scale(1); } to { transform: translate3d(2%, 2%, 0) scale(1.06); } }
+  .hero-in { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr); align-items: center; gap: clamp(1.5rem, 4vw, 4rem); }
+  .hero-kicker { margin: 0 0 1rem; color: var(--muted); font: 700 .78rem var(--body); letter-spacing: .14em; }
+  .hero h1 { margin: 0; font: 800 clamp(2.5rem, 5vw, 4.9rem)/1.06 var(--display); letter-spacing: -.05em; }
+  .hero h1 span { display: block; }
+  @media (min-width: 1024px) { .hero h1 span { white-space: nowrap; } }
+  .hero h1 em { font-style: normal; background: linear-gradient(90deg, rgb(var(--cyan)), rgb(var(--violet))); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hero-sub { margin: 1.25rem 0 0; max-width: 34rem; color: var(--text); font: 500 clamp(1.02rem, 1.4vw, 1.2rem)/1.6 var(--body); }
+  .hero-actions { display: flex; flex-wrap: wrap; gap: .7rem; margin-top: 1.75rem; }
+  .hero-actions .btn { min-height: 3.2rem; padding-inline: 1.6rem; }
+
+  /* Buttons on Home: a clear lit ring on hover / focus, a press on :active (global). */
+  .glow-btn { transition: color var(--fast), background-color var(--fast), box-shadow var(--base) var(--ease), transform 140ms var(--ease); }
+  .glow-btn:hover, .glow-btn:focus-visible { box-shadow: 0 0 0 1px rgba(var(--cyan), .9), 0 10px 32px -10px rgba(var(--cyan), .75); }
+  .btn-ghost:hover, .btn-ghost:focus-visible { border-color: rgba(var(--violet), .9); }
+
+  /* Hero images: the game's key art, and a smaller real build screen of the 2D game over its corner. Full images,
+     never cropped; their light is a soft edge, not a filter over the picture. */
+  /* The front image overlaps only the bottom edge of the key art (about 5% of its height), away from the
+     character and the machine, and never covers the key art's caption. */
+  .hero-visual { position: relative; padding-bottom: 19%; }
+  .hv { position: relative; margin: 0; }
+  .hv img { width: 100%; height: auto; border-radius: 16px; }
+  .hv-back img { aspect-ratio: 1400 / 788; box-shadow: 0 0 0 1px rgba(var(--cyan), .35), 0 24px 70px -24px rgba(var(--cyan), .55), 0 0 90px -30px rgba(var(--violet), .7); }
+  .hv-front { position: absolute; right: -2%; bottom: 0; width: 42%; }
+  .hv-front img { aspect-ratio: 16 / 9; border: 1px solid rgba(var(--gold), .55); box-shadow: 0 18px 50px -18px rgba(0, 0, 0, .9), 0 0 40px -12px rgba(var(--gold), .6); }
+  .hv figcaption { margin-top: .4rem; color: var(--muted); font: 600 .74rem/1.35 var(--body); }
+  .hv-front figcaption { text-shadow: 0 1px 6px #000; }
+
+  /* Section heads */
+  .sec-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: .4rem 1.25rem; margin-bottom: clamp(1rem, 2vw, 1.5rem); }
+  .sec-head h2 { margin: 0; font: 800 clamp(1.8rem, 3.4vw, 2.8rem)/1.05 var(--display); letter-spacing: -.045em; }
+  .sec-mark { color: transparent; -webkit-text-stroke: 1px rgba(var(--light), .28); font: 800 clamp(1.4rem, 3vw, 2.4rem)/1 var(--display); letter-spacing: -.02em; }
+  .sec-head .go { margin-left: auto; }
+
+  /* Featured projects: two sizes, image first. */
+  .projects { margin-top: clamp(1rem, 3vw, 2.5rem); }
+  .show-grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: clamp(1.25rem, 2.6vw, 2.25rem); align-items: start; }
+  .show { --edge: var(--cyan); display: grid; gap: .9rem; min-width: 0; }
+  .show-dev { --edge: var(--gold); }
+  .show-img { position: relative; display: block; overflow: hidden; border-radius: 16px; background: #000;
+    box-shadow: 0 0 0 1px rgba(var(--edge), .35), 0 20px 60px -30px rgba(var(--edge), .6);
+    transition: box-shadow var(--base) var(--ease); }
+  .show-img img { width: 100%; height: auto; transition: transform 700ms var(--ease); }
+  .show-lead .show-img img { aspect-ratio: 1486 / 760; }
+  .show-dev .show-img img { aspect-ratio: 16 / 9; }
+  .zoom { position: absolute; right: .7rem; bottom: .7rem; padding: .25rem .6rem; border-radius: 999px; background: rgba(9, 10, 13, .78); color: #fff; font: 700 .74rem var(--body); }
+  .show:hover .show-img, .show-img:focus-visible { box-shadow: 0 0 0 1px rgba(var(--edge), .95), 0 0 0 4px rgba(var(--edge), .14), 0 24px 70px -24px rgba(var(--edge), .85); }
+  @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    .show:hover .show-img img { transform: scale(1.035); }
+  }
+  .show-body { display: grid; gap: .55rem; justify-items: start; }
+  .chip { margin: 0; padding: .2rem .65rem; border: 1px solid; border-radius: 999px; font: 700 .76rem/1.4 var(--body); }
+  .chip-cyan { border-color: rgba(var(--cyan), .6); color: rgb(var(--cyan)); background: rgba(var(--cyan), .08); }
+  .chip-gold { border-color: rgba(var(--gold), .6); color: rgb(var(--gold)); background: rgba(var(--gold), .08); }
+  .chip-violet { border-color: rgba(var(--violet), .65); color: #C9B3FF; background: rgba(var(--violet), .1); }
+  .show h3 { margin: 0; font: 800 clamp(1.7rem, 3vw, 2.6rem)/1.05 var(--display); letter-spacing: -.045em; }
+  .show h3 small { display: block; margin-top: .3rem; color: var(--faint); font: 500 .82rem var(--body); letter-spacing: 0; }
+  .show-dev h3 { font-size: clamp(1.45rem, 2.4vw, 2rem); }
+  .show-sum { margin: 0; max-width: 40rem; color: var(--text); font-size: 1rem; line-height: 1.6; }
+  .show-now { display: grid; gap: .1rem; margin: 0; color: var(--muted); font-size: .94rem; line-height: 1.6; }
+  .show-now span { color: var(--faint); font: 700 .76rem var(--body); }
+  .show-cap { margin: 0; color: var(--faint); font-size: .8rem; }
+  .show-thumbs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; width: 100%; margin: .2rem 0 0; padding: 0; list-style: none; }
+  .show-thumbs a { display: grid; gap: .3rem; }
+  .show-thumbs img { width: 100%; height: auto; aspect-ratio: 16 / 7; object-fit: cover; border: 1px solid var(--line-strong); border-radius: 10px; transition: border-color var(--fast); }
+  .show-thumbs span { color: var(--muted); font: 600 .78rem/1.35 var(--body); }
+  .show-thumbs a:hover img, .show-thumbs a:focus-visible img { border-color: rgba(var(--cyan), .9); }
+  .show-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1.25rem; margin-top: .3rem; }
+  .show-actions .btn { min-height: 3rem; }
+  .tri { width: 0; height: 0; border-block: .38em solid transparent; border-left: .62em solid currentColor; }
+  .show:hover .show-actions .go span { transform: translateX(4px); }
   .go { display: inline-flex; align-items: center; gap: .35rem; min-height: 2.75rem; font: 700 .92rem var(--body); }
   .go span { transition: transform var(--base) var(--ease); }
   .go:hover span, .go:focus-visible span { transform: translateX(4px); }
+  .go:active { opacity: .75; }
 
-  /* Left: things to play. Right: things to check. */
-  .bento { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); column-gap: clamp(1.25rem, 2.6vw, 2.5rem); align-items: start; }
-  .col { display: flex; flex-direction: column; gap: clamp(1rem, 1.8vw, 1.5rem); min-width: 0; }
+  /* 롱야봇: a wide band. A quiet violet edge, no moving light. */
+  .bot-band { margin-top: clamp(3rem, 6vw, 5rem); }
+  .bot-in { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: clamp(1.25rem, 3vw, 2.75rem); align-items: center;
+    padding: clamp(1.25rem, 3vw, 2.25rem); border: 1px solid rgba(var(--violet), .35); border-radius: 20px;
+    background: linear-gradient(120deg, rgba(var(--violet), .12), rgba(9, 10, 13, 0) 55%), #0E1016; }
+  .bot-text { display: grid; gap: .7rem; justify-items: start; }
+  .bot-text h2 { margin: 0; font: 800 clamp(2.2rem, 4.6vw, 3.8rem)/1 var(--display); letter-spacing: -.05em; }
+  .bot-sum { margin: 0; font-size: 1.02rem; line-height: 1.6; }
+  .bot-points { display: flex; flex-wrap: wrap; gap: .45rem; margin: 0; padding: 0; list-style: none; }
+  .bot-points li { padding: .3rem .75rem; border: 1px solid rgba(var(--violet), .45); border-radius: 10px; font: 700 .88rem var(--body); }
+  .bot-note { margin: 0; color: var(--faint); font-size: .82rem; }
+  .bot-shots { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: .75rem; margin: 0; padding: 0; list-style: none; align-items: start; }
+  .bot-shots li { display: grid; gap: .3rem; min-width: 0; }
+  .bot-shots li.main { grid-row: span 2; }
+  .bot-shots a { display: block; overflow: hidden; border: 1px solid var(--line-strong); border-radius: 10px; background: #000; transition: border-color var(--fast); }
+  .bot-shots a:hover, .bot-shots a:focus-visible { border-color: rgba(var(--violet), .95); }
+  .bot-shots img { width: 100%; height: auto; }
+  .bot-cap { color: var(--muted); font: 600 .78rem/1.35 var(--body); }
 
-  /* 개발·연구 중: two equal columns that share one starting rule, no cards. The game shows its real screen, the
-     research its key question; both then read summary, current work and one link in the same rhythm. */
-  .wip { margin-top: clamp(2.25rem, 4.5vw, 3.5rem); }
-  .wip-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .25rem 1rem; padding-bottom: .6rem; border-bottom: 2px solid var(--text); }
-  .wip-head h2 { margin: 0; font: 800 clamp(1.5rem, 2.4vw, 1.9rem)/1.1 var(--display); letter-spacing: -.03em; }
-  .wip-date { color: var(--faint); font: 500 .78rem var(--body); font-variant-numeric: tabular-nums; }
-  .wip-grid { --g: clamp(1.25rem, 3vw, 2.5rem); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-  .wip-item { display: flex; flex-direction: column; align-items: flex-start; gap: .6rem; min-width: 0; padding-top: clamp(1.1rem, 2vw, 1.5rem); }
-  .wip-item:not(:last-child) { padding-right: var(--g); }
-  .wip-item + .wip-item { padding-left: var(--g); border-left: 1px solid var(--line); }
-  .wip-status { margin: 0; color: var(--muted); font: 700 .82rem var(--body); }
-  .wip-status::before { content: ''; display: inline-block; width: .45rem; height: .45rem; margin-right: .45rem; border-radius: 50%; background: var(--muted); vertical-align: .1em; }
-  .wip-item h3 { margin: 0; font: 800 clamp(1.45rem, 2.4vw, 1.85rem)/1.15 var(--display); letter-spacing: -.03em; }
-  .wip-item h3 a { background: linear-gradient(currentColor, currentColor) 0 100% / 0 2px no-repeat; transition: background-size var(--base) var(--ease); }
-  .wip-item h3 a:hover, .wip-item h3 a:focus-visible { background-size: 100% 2px; }
-  .wip-shot { display: block; width: 100%; margin-top: .3rem; overflow: hidden; border-radius: 10px; }
-  .wip-shot img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; transition: transform var(--base) var(--ease); }
-  .wip-shot:hover img { transform: scale(1.015); }
-  .wip-caption { margin: -.2rem 0 0; color: var(--faint); font: 500 .78rem var(--body); }
-  .wip-question { display: grid; gap: .45rem; width: 100%; margin-top: .3rem; padding-block: clamp(1rem, 2.4vw, 1.75rem); border-block: 1px solid var(--line); }
-  .wip-question span { color: var(--faint); font: 700 .78rem var(--body); letter-spacing: .04em; }
-  .wip-question p { margin: 0; font: 800 clamp(1.8rem, 3.8vw, 3rem)/1.2 var(--display); letter-spacing: -.04em; text-wrap: balance; }
-  .wip-summary { margin: 0; max-width: 34rem; font: 600 1.02rem/1.6 var(--body); }
-  .wip-now { display: grid; gap: .15rem; margin: 0; }
-  .wip-now dt { color: var(--faint); font: 700 .78rem var(--body); }
-  .wip-now dd { margin: 0; max-width: 34rem; color: var(--muted); font-size: .95rem; line-height: 1.6; }
-  .wip-link { margin-top: .15rem; }
+  /* 주식 연구: full width, calm. */
+  .research { margin-top: clamp(3rem, 6vw, 5rem); }
 
-  /* One remaining project uses the row: screenshot left, project information right. */
-  @media (min-width: 761px) {
-    .wip-item:only-child { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: var(--g); align-items: start; }
-    .wip-item:only-child > * { grid-column: 2; }
-    .wip-item:only-child .wip-status { grid-row: 1; }
-    .wip-item:only-child h3 { grid-row: 2; }
-    .wip-item:only-child .wip-summary { grid-row: 3; }
-    .wip-item:only-child .wip-now { grid-row: 4; }
-    .wip-item:only-child .wip-link { grid-row: 5; }
-    .wip-item:only-child .wip-shot { grid-column: 1; grid-row: 1 / 6; margin-top: 0; }
-    .wip-item:only-child .wip-caption { grid-column: 1; grid-row: 6; }
-  }
-
-  /* Mini-game entrance: a quiet row (a ruled line, a small signal dot, one line of text, one link), so it does
-     not compete with the featured game. The whole row is clickable through the link. */
-  .play { position: relative; margin-top: clamp(1.75rem, 3.5vw, 2.5rem); display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .4rem 1rem; padding: .9rem 0; border-block: 1px solid var(--line); }
-  .signal { width: .9rem; height: .9rem; border-radius: 50%; background: #B42318; box-shadow: 0 0 0 4px rgba(180, 35, 24, .18); transition: background-color 120ms linear, box-shadow 120ms linear; }
-  .play:hover .signal, .play:focus-within .signal { background: #12864A; box-shadow: 0 0 0 4px rgba(18, 134, 74, .22); }
-  .play-text { display: grid; gap: .1rem; min-width: 0; }
-  .play h2 { margin: 0; font: 800 1.15rem/1.2 var(--display); letter-spacing: -.02em; }
-  .play p { margin: 0; color: var(--muted); font-size: .9rem; line-height: 1.45; }
-  .play-link::after { content: ''; position: absolute; inset: 0; }
-  .play:hover .play-link span { transform: translateX(4px); }
-
-  /* News: a plain dated list with topic links as secondary navigation. */
-  .news { display: grid; align-content: start; gap: .5rem; margin-top: clamp(2.25rem, 4.5vw, 3.5rem); }
-  .news-head h2 { margin: 0; font: 800 1.15rem var(--display); letter-spacing: -.02em; }
+  /* News, reaction test, other projects, contact: plain ruled lists. */
+  .news { display: grid; align-content: start; gap: .5rem; margin-top: clamp(3rem, 6vw, 4.5rem); }
+  .news-head h2 { margin: 0; font: 800 clamp(1.3rem, 2vw, 1.6rem) var(--display); letter-spacing: -.03em; }
   .news-head { display: flex; align-items: baseline; gap: .6rem; }
   .news-sub { color: var(--faint); font: 500 .78rem var(--body); }
   .feed { display: grid; margin: 0; padding: 0; list-style: none; }
-  .feed li { display: grid; grid-template-columns: 5.6rem 4.6rem minmax(0, 1fr); align-items: baseline; gap: .6rem; padding: .55rem 0; border-top: 1px solid var(--line); }
+  .feed li { display: grid; grid-template-columns: 5.6rem 4.6rem minmax(0, 1fr); align-items: baseline; gap: .6rem; padding: .6rem 0; border-top: 1px solid var(--line); }
   .feed li:last-child { border-bottom: 1px solid var(--line); }
   .feed time { color: var(--faint); font: 500 .8rem var(--body); font-variant-numeric: tabular-nums; }
   .kind { color: var(--muted); font: 700 .75rem var(--body); white-space: nowrap; }
   .kind[data-kind='game'] { color: #F5C451; }
-  .kind[data-kind='bot'] { color: #A5ADFF; }
+  .kind[data-kind='bot'] { color: #C9B3FF; }
+  .kind[data-kind='site'] { color: rgb(var(--cyan)); }
   .kind[data-kind='research'] { color: #7BE3AF; }
   .feed a { display: inline-block; padding-block: .4rem; margin-block: -.4rem; font-weight: 600; background: linear-gradient(currentColor, currentColor) 0 85% / 0 1px no-repeat; transition: background-size var(--base) var(--ease); }
   .feed a:hover, .feed a:focus-visible { background-size: 100% 1px; }
@@ -237,6 +373,16 @@ const topics: ReadonlyArray<readonly [string, string]> = [
   .topics a { display: inline-flex; align-items: center; min-height: 2.25rem; padding: 0 .8rem; border-radius: 999px; background: rgba(255, 255, 255, .06); color: var(--muted); font: 600 .82rem var(--body); transition: background-color var(--fast), color var(--fast); }
   .topics a:hover, .topics a:focus-visible { background: var(--text); color: var(--bg); }
 
+  /* Reaction test: a small row. */
+  .play-wrap { margin-top: clamp(1.75rem, 3.5vw, 2.5rem); }
+  .play { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .4rem 1rem; padding: .85rem 0; border-block: 1px solid var(--line); }
+  .signal { width: .9rem; height: .9rem; border-radius: 50%; background: #B42318; box-shadow: 0 0 0 4px rgba(180, 35, 24, .18); transition: background-color 120ms linear, box-shadow 120ms linear; }
+  .play:hover .signal, .play:focus-within .signal { background: #12864A; box-shadow: 0 0 0 4px rgba(18, 134, 74, .22); }
+  .play-text { display: grid; gap: .1rem; min-width: 0; }
+  .play h2 { margin: 0; font: 800 1.1rem/1.2 var(--display); letter-spacing: -.02em; }
+  .play p { margin: 0; color: var(--muted); font-size: .9rem; line-height: 1.45; }
+  .play-link::after { content: ''; position: absolute; inset: 0; }
+  .play:hover .play-link span { transform: translateX(4px); }
 
   .more { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(1.5rem, 4vw, 3.5rem); margin-top: clamp(2.5rem, 5vw, 4rem); }
   .more-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: .25rem; }
@@ -248,26 +394,41 @@ const topics: ReadonlyArray<readonly [string, string]> = [
   .psum { grid-column: 1 / -1; color: var(--muted); font-size: .92rem; line-height: 1.55; }
   .pstage { grid-column: 2; grid-row: 1; color: var(--faint); font-size: .8rem; white-space: nowrap; }
 
-  .contact { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1.25rem; margin-top: clamp(3rem, 6vw, 5rem); padding-block: clamp(1.75rem, 3vw, 2.5rem); border-top: 1px solid var(--line); }
+  .contact { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: .6rem 1.5rem; margin-top: clamp(3rem, 6vw, 5rem); padding-block: clamp(1.75rem, 3vw, 2.5rem); border-top: 1px solid var(--line); }
   .contact h2 { margin: 0; font: 800 clamp(1.5rem, 3vw, 2.3rem)/1.15 var(--display); letter-spacing: -.04em; }
-  .contact-actions { display: flex; flex-wrap: wrap; gap: .6rem; }
+  .contact-mail { grid-column: 1; justify-self: start; display: inline-flex; align-items: center; min-height: 2.75rem; color: var(--muted); font: 600 1rem var(--body); background: linear-gradient(currentColor, currentColor) 0 80% / 0 1px no-repeat; transition: background-size var(--base) var(--ease), color var(--fast); }
+  .contact-mail:hover, .contact-mail:focus-visible { color: var(--text); background-size: 100% 1px; }
+  .contact-actions { grid-column: 2; grid-row: 1 / span 2; display: flex; flex-wrap: wrap; gap: .6rem; }
 
-  /* Short laptop screens: give the image a little less width (never a crop). */
-  @media (min-width: 1024px) and (max-height: 820px) {
-    .bento { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-  }
+  /* Tablet */
   @media (max-width: 1023px) {
-    .bento { grid-template-columns: minmax(0, 1fr); row-gap: clamp(1rem, 1.8vw, 1.5rem); }
+    .hero-in { grid-template-columns: minmax(0, 1fr); }
+    .hero-visual { max-width: 44rem; }
+    .show-grid { grid-template-columns: minmax(0, 1fr); }
+    .bot-in { grid-template-columns: minmax(0, 1fr); }
     .more { grid-template-columns: 1fr; }
   }
+  /* Phone: lighter effects (no drifting light, smaller glow), everything reachable without hover. */
   @media (max-width: 760px) {
-    .wip-grid { grid-template-columns: minmax(0, 1fr); row-gap: 1.75rem; }
-    .wip-item:not(:last-child) { padding-right: 0; }
-    .wip-item + .wip-item { padding-left: 0; border-left: 0; border-top: 1px solid var(--line); }
+    .hero { padding-top: 1.25rem; }
+    .hero-light { inset: -10% -30% 20%; opacity: .8; }
+    .hv-back img { box-shadow: 0 0 0 1px rgba(var(--cyan), .35), 0 14px 40px -18px rgba(var(--cyan), .5); }
+    /* Phone: the two images stack without overlapping. */
+    .hv-front { position: relative; right: auto; width: 72%; margin: .9rem 0 0 auto; }
+    .hero-visual { padding-bottom: 0; }
+    .sec-mark { display: none; }
+    .show-img { box-shadow: 0 0 0 1px rgba(var(--edge), .45); }
+    .bot-shots { grid-template-columns: minmax(0, 1fr); }
+    .bot-shots li.main { grid-row: auto; }
+    .contact { grid-template-columns: minmax(0, 1fr); }
+    .contact-actions { grid-column: 1; grid-row: auto; }
   }
   @media (max-width: 680px) {
     .feed li { grid-template-columns: auto 1fr; gap: .2rem .6rem; }
     .feed li > :last-child { grid-column: 1 / -1; }
-    .contact-actions, .contact-actions .btn { width: 100%; }
+    .hero-actions .btn, .contact-actions, .contact-actions .btn { flex: 1 1 auto; }
+  }
+  @media (max-width: 400px) {
+    .show-thumbs { grid-template-columns: minmax(0, 1fr); }
   }
 </style>
