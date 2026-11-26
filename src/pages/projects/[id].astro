@@ -34,6 +34,8 @@ const updates = await getProjectUpdates(project.id);
 // A project in Home's "개발·연구 중" area keeps its state and current work in `wip` (one place to edit).
 const statusTitle = data.statusTitle ?? data.wip?.status;
 const statusText = data.statusText ?? data.wip?.now;
+// Screens shown under the poster: the poster itself is not repeated there.
+const gallery = data.screens.filter((x) => x.src !== data.media?.poster);
 const hasRecord = data.progress.length > 0 || data.result || data.reason || data.versions.length > 0 || related.length > 0 || data.changelog;
 ---
 <BaseLayout title={`${data.title} — YARONG`} description={summary}>
@@ -127,16 +129,19 @@ const hasRecord = data.progress.length > 0 || data.result || data.reason || data
 
       {data.media && (
         <figure class="intro-media">
-          <img class="intro-poster" src={data.media.poster} alt={data.media.alt} width="1400" height="788" loading="eager" />
+          {/* The whole picture at its own aspect ratio; a click opens the original in the image viewer. */}
+          <a class="intro-poster-link" href={data.media.poster} data-lightbox data-caption={data.media.note ?? data.title} data-alt={data.media.alt} aria-label={`${data.media.note ?? data.title} — 크게 보기`}>
+            <img class="intro-poster" src={data.media.poster} alt={data.media.alt} width={data.media.width ?? 1400} height={data.media.height ?? 788} loading="eager" />
+          </a>
           {data.media.note && <figcaption>{data.media.note}</figcaption>}
         </figure>
       )}
 
-      {data.screens.length > 0 && (
+      {gallery.length > 0 && (
         <section class="intro-screens" aria-labelledby="screens-title">
           <h2 id="screens-title">실제 화면</h2>
-          <ul class:list={['screen-list', { narrow: data.screens.every((x) => x.width < 900) }]}>
-            {data.screens.map((x) => (
+          <ul class:list={['screen-list', { narrow: gallery.every((x) => x.width < 900) }]}>
+            {gallery.map((x) => (
               <li>
                 <figure>
                   <a href={x.src} data-lightbox data-caption={x.caption} data-alt={x.alt} aria-label={`${x.caption} — 크게 보기`}>
@@ -282,7 +287,9 @@ const hasRecord = data.progress.length > 0 || data.result || data.reason || data
   .intro-actions { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1.5rem; }
   .intro-actions .btn { min-height: 3.1rem; }
   .intro-media { margin: clamp(2rem, 5vw, 3rem) 0 0; }
-  .intro-poster { width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 18px; }
+  .intro-poster-link { display: block; border-radius: 18px; overflow: hidden; }
+  .intro-poster { width: 100%; height: auto; border-radius: 18px; transition: transform 600ms var(--ease); }
+  .intro-poster-link:hover .intro-poster { transform: scale(1.015); }
   .intro-screens { margin-top: clamp(2rem, 5vw, 3rem); }
   .intro-screens h2 { margin: 0 0 .9rem; font: 800 clamp(1.15rem, 1.8vw, 1.35rem) var(--display); letter-spacing: -.02em; }
   .screen-list { display: grid; gap: 1.25rem; margin: 0; padding: 0; list-style: none; }

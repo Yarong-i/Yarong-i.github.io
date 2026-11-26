@@ -42,6 +42,9 @@ const projects = defineCollection({
     media: z.object({
       poster: z.string(),
       alt: z.string(),
+      // The poster's own size; it is shown at its own aspect ratio (default 1400 x 788).
+      width: z.number().int().positive().optional(),
+      height: z.number().int().positive().optional(),
       // Optional short muted loop (mp4/webm). Plays on hover or when in view; never under reduced motion.
       video: z.string().optional(),
       // What the images are and how current they are, e.g. development screens from an earlier build.

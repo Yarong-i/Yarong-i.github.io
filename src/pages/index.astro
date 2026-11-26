@@ -1,7 +1,7 @@
 ---
 // Home. Order: ① short intro ② today's picks (right under the intro, no motion before the table) ③ 폐품 공장 (C's
 // three scenes, compressed, right to left like the real screen) ④ 롱야봇 (one large real screen, three features)
-// ⑤ 2D 액션 게임 · 지금 하는 일 ⑥ 최근 업데이트 (done) ⑦ other projects, past research, reaction test, contact.
+// ⑤ 2D 액션 플랫포머 · 지금 하는 일 ⑥ 최근 업데이트 (done) ⑦ other projects, past research, reaction test, contact.
 import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import FactoryGraphic from '../components/home/FactoryGraphic.astro';
@@ -160,7 +160,7 @@ const makes = [
     </div>
   </section>
 
-  {/* ⑤ 2D 액션 게임 · 지금 하는 일 */}
+  {/* ⑤ 2D 액션 플랫포머 · 지금 하는 일 */}
   <section id="dev" class="d-dev shell" aria-labelledby="d-dev-h" data-reveal>
     <figure class="d-dev-fig" data-unveil>
       <a href={devShot.src} data-lightbox data-caption={devShot.caption} data-alt={devShot.alt} aria-label={`${devShot.caption} 크게 보기`}>
@@ -413,7 +413,7 @@ const makes = [
   .d-bot-shot a:hover img { transform: scale(1.02); }
   .d-bot-shot figcaption { color: var(--d-sub); font: 600 .85rem var(--d-font); }
 
-  /* ⑤ 2D 액션 게임 */
+  /* ⑤ 2D 액션 플랫포머 */
   .d-dev { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: clamp(1.5rem, 4vw, 4rem); align-items: center; padding-block: clamp(4rem, 9vw, 6rem); border-top: 1px solid var(--d-line); }
   .d-dev-fig { position: relative; margin: 0; border-radius: 18px; overflow: hidden; box-shadow: 0 0 0 1px var(--d-line); }
   .d-dev-fig img { width: 100%; height: auto; transition: transform 700ms var(--ease); }
