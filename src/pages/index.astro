@@ -7,7 +7,8 @@ import { getPerformance, getResearchDays } from '../utils/research';
 import { getFeed, FEED_LABEL, formatFeedDate } from '../utils/news';
 import { projectSummary, stageLabel } from '../utils/projects';
 
-const projects = await getCollection('projects');
+// Home visibility only: retain the coin research page and its entries in the project archive.
+const projects = (await getCollection('projects')).filter((p) => p.id !== 'coin-research');
 const featured = projects.filter((p) => p.data.featured !== undefined).sort((a, b) => a.data.featured! - b.data.featured!);
 const isResearch = (p: (typeof projects)[number]) => /연구|Finance/i.test(p.data.category ?? '');
 // "지난 연구" is decided by stage, not by category: only research that is paused, ended or finished.
@@ -190,6 +191,19 @@ const topics: ReadonlyArray<readonly [string, string]> = [
   .wip-now dt { color: var(--faint); font: 700 .78rem var(--body); }
   .wip-now dd { margin: 0; max-width: 34rem; color: var(--muted); font-size: .95rem; line-height: 1.6; }
   .wip-link { margin-top: .15rem; }
+
+  /* One remaining project uses the row: screenshot left, project information right. */
+  @media (min-width: 761px) {
+    .wip-item:only-child { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: var(--g); align-items: start; }
+    .wip-item:only-child > * { grid-column: 2; }
+    .wip-item:only-child .wip-status { grid-row: 1; }
+    .wip-item:only-child h3 { grid-row: 2; }
+    .wip-item:only-child .wip-summary { grid-row: 3; }
+    .wip-item:only-child .wip-now { grid-row: 4; }
+    .wip-item:only-child .wip-link { grid-row: 5; }
+    .wip-item:only-child .wip-shot { grid-column: 1; grid-row: 1 / 6; margin-top: 0; }
+    .wip-item:only-child .wip-caption { grid-column: 1; grid-row: 6; }
+  }
 
   /* Mini-game entrance: a quiet row (a ruled line, a small signal dot, one line of text, one link), so it does
      not compete with the featured game. The whole row is clickable through the link. */
