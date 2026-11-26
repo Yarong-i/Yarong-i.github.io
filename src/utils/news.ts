@@ -19,7 +19,7 @@ const newestFirst = (a: { data: { date: Date } ; id: string }, b: { data: { date
  * Only entries with a real date are included; nothing is dated by build time.
  */
 export async function getFeed(limit = 3): Promise<FeedItem[]> {
-  const news = (await getCollection('news', ({ data }) => !data.draft && data.kind !== 'research')).sort(newestFirst);
+  const news = (await getCollection('news', ({ data }) => !data.draft && data.home && data.kind !== 'research')).sort(newestFirst);
   return news.slice(0, limit).map(({ data }) => ({
     date: data.date,
     kind: data.kind,

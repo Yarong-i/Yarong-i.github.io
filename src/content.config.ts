@@ -282,6 +282,8 @@ const news = defineCollection({
     // Project id (file name in src/content/projects) the update belongs to.
     project: z.string().optional(),
     title: z.string(),
+    // Hide minor updates from Home while retaining the project update log.
+    home: z.boolean().default(true),
     change: z.string().optional(),
     reason: z.string().optional(),
     result: z.string().optional(),
