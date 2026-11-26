@@ -107,8 +107,10 @@ const projects = defineCollection({
 // so fixture records never enter the real build.
 const env = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {};
 const fixtures = env.RESEARCH_SOURCE === 'fixtures';
-const researchBase = fixtures ? './tests/fixtures/research' : './src/content/research';
-const performanceBase = fixtures ? './tests/fixtures/performance' : './src/content/performance';
+// RESEARCH_FIXTURE_DIR (fixture builds only) points at another set of check data with the same layout.
+const fixtureDir = env.RESEARCH_FIXTURE_DIR ?? './tests/fixtures';
+const researchBase = fixtures ? `${fixtureDir}/research` : './src/content/research';
+const performanceBase = fixtures ? `${fixtureDir}/performance` : './src/content/performance';
 
 // Portfolio write-up of a project: src/content/portfolios/<project id>.md, shown at /projects/<id>/portfolio/.
 // Goal, role and current stage come first so a reader gets them at a glance; the body holds the cases.

@@ -1,434 +1,484 @@
 ---
+// Home. Order: ① short intro ② today's picks (right under the intro, no motion before the table) ③ 폐품 공장 (C's
+// three scenes, compressed, right to left like the real screen) ④ 롱야봇 (one large real screen, three features)
+// ⑤ 2D 액션 게임 · 지금 하는 일 ⑥ 최근 업데이트 (done) ⑦ other projects, past research, reaction test, contact.
 import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
+import FactoryGraphic from '../components/home/FactoryGraphic.astro';
+import PerformanceChart from '../components/home/PerformanceChart.astro';
 import ResearchToday from '../components/ResearchToday.astro';
+import { STILL } from '../components/home/factoryModel';
 import { getPerformance, getResearchDays } from '../utils/research';
 import { getFeed, FEED_LABEL, formatFeedDate } from '../utils/news';
 import { projectSummary, stageLabel } from '../utils/projects';
 import { CONTACT, mailto } from '../data/site';
 
-// Home visibility only: retain the coin research page and its entries in the project archive.
+// Same selection rules as the live Home (coin research is kept off Home).
 const projects = (await getCollection('projects')).filter((p) => p.id !== 'coin-research');
-const featured = projects.filter((p) => p.data.featured !== undefined).sort((a, b) => a.data.featured! - b.data.featured!);
+const by = (id: string) => projects.find((p) => p.id === id)!;
+const game = by('junk-factory');
+const bot = by('discord-economy-bot');
+const dev = by('2d-action-game');
 const isResearch = (p: (typeof projects)[number]) => /연구|Finance/i.test(p.data.category ?? '');
-// "지난 연구" is decided by stage, not by category: only research that is paused, ended or finished.
-// Research that is still going (or has no stage) stays with the other projects; nothing is promoted.
 const PAST = new Set(['paused', 'ended', 'finished']);
 const isPastResearch = (p: (typeof projects)[number]) => isResearch(p) && PAST.has(p.data.stage ?? '');
 const CURRENT = new Set(['live', 'operating', 'in-use', 'active']);
-// Projects with `wip` (in development) are shown in the project area, not again in "다른 프로젝트".
-const wip = projects.filter((p) => p.data.wip).sort((a, b) => a.data.wip!.order - b.data.wip!.order);
 const shown = (p: (typeof projects)[number]) => p.data.featured !== undefined || p.data.wip !== undefined;
-// "다른 프로젝트": projects that set `home` (in that order), then current research that is not shown above.
 const others = [
-  ...projects.filter((p) => p.data.home !== undefined && !shown(p) && !isPastResearch(p))
-    .sort((a, b) => a.data.home! - b.data.home!),
+  ...projects.filter((p) => p.data.home !== undefined && !shown(p) && !isPastResearch(p)).sort((a, b) => a.data.home! - b.data.home!),
   ...projects.filter((p) => p.data.home === undefined && !shown(p) && isResearch(p) && CURRENT.has(p.data.stage ?? '')),
 ];
-const pastResearch = projects.filter((p) => isPastResearch(p) && p.data.featured === undefined)
-  .sort((a, b) => (b.data.year ?? 0) - (a.data.year ?? 0));
+const pastResearch = projects.filter((p) => isPastResearch(p) && p.data.featured === undefined).sort((a, b) => (b.data.year ?? 0) - (a.data.year ?? 0));
 const researchDays = await getResearchDays();
 const performance = await getPerformance();
 const feed = await getFeed(3);
-const game = featured.find((p) => p.data.media);
-const bot = featured.find((p) => !p.data.media);
-// The project in development shown next to the live game (2D 액션 게임), with its own real build screen.
-const dev = wip.find((p) => p.data.wip?.image);
-const devShot = dev ? dev.data.screens.find((x) => x.src === dev.data.wip!.image) : undefined;
-// The live game: its real factory screen leads its card; the official key art leads the hero.
-const gameShot = game?.data.screens[0];
-const gameMore = game?.data.screens.slice(1) ?? [];
-// Hero visual: only real images - the game's official key art and the 2D game's other real build screen.
-const heroBack = game?.data.media;
-const heroFront = dev?.data.screens.find((x) => x.src !== dev.data.wip!.image);
-// Secondary navigation for the feed: browse by topic.
-const topics: ReadonlyArray<readonly [string, string]> = [
-  ['/projects/junk-factory/', '게임'], ['/projects/discord-economy-bot/', '봇'], ['/research', '주식 연구'], ['/archive', '전체 기록'],
+
+const real = game.data.screens[0]!;
+// 폐품 공장's current work: the second sentence of its recorded status (nothing else is assumed).
+const gameNow = (game.data.statusText ?? '').split(/(?<=다\.)\s+/)[1];
+const scenes = [
+  { n: '01', h: '모으고.', p: '흩어진 폐품을 모아 투입구로 가져갑니다.' },
+  { n: '02', h: '가공하고.', p: '라인을 지나며 가공되고, 판매기에서 돈이 됩니다.' },
+  { n: '03', h: '자동화하고.', p: '원격 집하장과 자동 공급 설비가 운반과 생산을 이어 줍니다.' },
+];
+// 롱야봇: three features, each with its own real screen (different moments, not one trade).
+const shot = (src: string) => bot.data.screens.find((x) => x.src.endsWith(src))!;
+const feat = (title: string) => bot.data.features.find((f) => f.title === title)!.text;
+const botViews = [
+  { id: 'news', label: '기업 소식', text: feat('판단에 활용하는 정보'), s: shot('company-news.webp') },
+  { id: 'price', label: '주가 확인', text: feat('정각마다 갱신되는 시장'), s: shot('price-alert.webp') },
+  { id: 'order', label: '주문 확인', text: feat('Discord에서 거래'), s: shot('buy-confirm.webp') },
+];
+const devShot = dev.data.screens.find((x) => x.src === dev.data.wip!.image)!;
+const makes = [
+  { href: '#jf', name: game.data.title, note: 'Roblox 게임' },
+  { href: '#bot', name: bot.data.title, note: 'Discord 봇' },
+  { href: '#today', name: '주식 연구', note: '날마다 기록' },
+  { href: '#dev', name: dev.data.title, note: '제작 중' },
 ];
 ---
-<BaseLayout title="YARONG — 게임, 봇, 주식 연구" description="Yarong이 만든 게임과 Discord 봇, 날마다 쌓는 주식 연구 기록, 바로 해 보는 반응속도 테스트.">
-  {/* Hero: the big line and real project images. The light behind it moves slowly (static under reduced motion). */}
-  <section class="hero" aria-labelledby="hero-h">
-    <div class="hero-light" aria-hidden="true"></div>
-    <div class="shell hero-in">
-      <div class="hero-text">
-        <p class="hero-kicker">YARONG · 게임 · 봇 · 주식 연구</p>
-        <h1 id="hero-h"><span>만들고, 실험하고,</span> <span>끝까지 <em>플레이</em>합니다.</span></h1>
-        <p class="hero-sub">게임과 봇을 만들고, 주식을 연구하는 야롱입니다.</p>
-        <div class="hero-actions">
-          <a class="btn btn-primary glow-btn" href="/projects">프로젝트 보기 <span class="arrow" aria-hidden="true">↗</span></a>
-          <a class="btn btn-ghost" href="/portfolio">포트폴리오</a>
-        </div>
+<BaseLayout title="YARONG — 게임, 봇, 주식 연구" description="Yarong이 만든 게임과 Discord 봇, 날마다 쌓는 주식 연구 기록, 바로 해 보는 반응속도 테스트." htmlClass="home-d"
+  fonts="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+  {/* ① Intro: short, so today's picks start on the first screen. */}
+  <section class="d-intro shell" aria-labelledby="d-h1">
+    <div class="d-intro-main">
+      <h1 id="d-h1" class="d-word" aria-label="YARONG">{'YARONG'.split('').map((ch, i) => <span class="ch" style={`--i:${i}`} aria-hidden="true">{ch}</span>)}</h1>
+      <p class="d-lede">게임과 봇을 만들고, 주식을 연구합니다.</p>
+      <div class="d-actions">
+        <a class="d-btn d-btn-main" href="/projects">프로젝트 보기</a>
+        <a class="d-btn d-btn-line" href="/portfolio">포트폴리오</a>
       </div>
-      {heroBack && (
-        <div class="hero-visual">
-          <figure class="hv hv-back">
-            <img src={heroBack.poster} alt={heroBack.alt} width="1400" height="788" loading="eager" fetchpriority="high" decoding="async" />
-            <figcaption>{game!.data.title} · {heroBack.note ?? '대표 이미지'}</figcaption>
-          </figure>
-          {heroFront && (
-            <figure class="hv hv-front">
-              <img src={heroFront.src} alt={heroFront.alt} width={heroFront.width} height={heroFront.height} loading="eager" decoding="async" />
-              <figcaption>{dev!.data.title} · {heroFront.caption}</figcaption>
-            </figure>
-          )}
-        </div>
-      )}
     </div>
-  </section>
-
-  {/* Projects: image-led, two sizes. The live game leads; the game in development sits beside it. */}
-  <section class="shell projects" aria-labelledby="projects-h">
-    <div class="sec-head">
-      <h2 id="projects-h">프로젝트</h2>
-      <span class="sec-mark" aria-hidden="true">PLAY / CREATE</span>
-      <a class="go" href="/projects">전체 프로젝트 <span aria-hidden="true">→</span></a>
-    </div>
-    <div class="show-grid">
-      {game && gameShot && (
-        <article class="show show-lead" aria-labelledby={`show-${game.id}`}>
-          <a class="show-img" href={gameShot.src} data-lightbox data-caption={gameShot.caption} data-alt={gameShot.alt} aria-label={`${gameShot.caption} — 크게 보기`}>
-            <img src={gameShot.src} alt={gameShot.alt} width={gameShot.width} height={gameShot.height} loading="eager" decoding="async" />
-            <span class="zoom" aria-hidden="true">크게 보기</span>
-          </a>
-          <div class="show-body">
-            <p class="chip chip-cyan">{stageLabel(game)}</p>
-            <h3 id={`show-${game.id}`}><a href={`/projects/${game.id}/`}>{game.data.title}</a>{game.data.alias && <small>{game.data.alias}</small>}</h3>
-            <p class="show-sum">{projectSummary(game)}</p>
-            {gameMore.length > 0 && (
-              <ul class="show-thumbs" aria-label={`${game.data.title} 실제 화면 더 보기`}>
-                {gameMore.map((x) => (
-                  <li><a href={x.src} data-lightbox data-caption={x.caption} data-alt={x.alt}>
-                    <img src={x.src} alt="" width={x.width} height={x.height} loading="lazy" decoding="async" />
-                    <span>{x.caption}</span><span class="sr-only"> 크게 보기</span>
-                  </a></li>
-                ))}
-              </ul>
-            )}
-            <div class="show-actions">
-              {game.data.playUrl && <a class="btn btn-primary glow-btn" href={game.data.playUrl} target="_blank" rel="noopener"><span class="tri" aria-hidden="true"></span>{game.data.playLabel ?? '플레이'}<span class="sr-only"> (새 창)</span></a>}
-              <a class="go" href={`/projects/${game.id}/`}>프로젝트 소개 <span aria-hidden="true">→</span></a>
-            </div>
-          </div>
-        </article>
-      )}
-      {dev && devShot && (
-        <article class="show show-dev" aria-labelledby={`show-${dev.id}`}>
-          <a class="show-img" href={devShot.src} data-lightbox data-caption={devShot.caption} data-alt={devShot.alt} aria-label={`${devShot.caption} — 크게 보기`}>
-            <img src={devShot.src} alt={devShot.alt} width={devShot.width} height={devShot.height} loading="eager" decoding="async" />
-            <span class="zoom" aria-hidden="true">크게 보기</span>
-          </a>
-          <div class="show-body">
-            <p class="chip chip-gold">{dev.data.wip!.status}</p>
-            <h3 id={`show-${dev.id}`}><a href={`/projects/${dev.id}/`}>{dev.data.title}</a></h3>
-            <p class="show-sum">{projectSummary(dev)}</p>
-            {dev.data.wip!.now && <p class="show-now"><span>현재 작업</span>{dev.data.wip!.now}</p>}
-            <p class="show-cap">{devShot.caption}</p>
-            <div class="show-actions">
-              <a class="go" href={`/projects/${dev.id}/`}>개발 이야기 <span aria-hidden="true">→</span></a>
-            </div>
-          </div>
-        </article>
-      )}
-    </div>
-  </section>
-
-  {/* 롱야봇: a wide band with the description and its real Discord screens. */}
-  {bot && (
-    <section class="shell bot-band" aria-labelledby="bot-h" data-reveal>
-      <div class="bot-in">
-        <div class="bot-text">
-          <p class="chip chip-violet">{stageLabel(bot)} · Discord</p>
-          <h2 id="bot-h"><a href={`/projects/${bot.id}/`}>{bot.data.title}</a></h2>
-          <p class="bot-sum">{projectSummary(bot)}</p>
-          {bot.data.highlights.length > 0 && <ul class="bot-points" aria-label="대표 기능">{bot.data.highlights.map((h) => <li>{h}</li>)}</ul>}
-          {bot.data.notice && <p class="bot-note">{bot.data.notice}</p>}
-          <a class="go" href={`/projects/${bot.id}/`}>프로젝트 소개 <span aria-hidden="true">→</span></a>
-        </div>
-        {bot.data.screens.length > 0 && (
-          <ul class="bot-shots" aria-label={`${bot.data.title} 실제 사용 화면`}>
-            {bot.data.screens.map((x, i) => (
-              <li class:list={[{ main: i === 0 }]}>
-                <a href={x.src} data-lightbox data-caption={x.caption} data-alt={x.alt}>
-                  <img src={x.src} alt={x.alt} width={x.width} height={x.height} loading="lazy" decoding="async" />
-                  <span class="sr-only">크게 보기</span>
-                </a>
-                <span class="bot-cap">{x.caption}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </section>
-  )}
-
-  {/* 주식 연구: full width and calm - no glow, the table carries it. */}
-  <section class="shell research" aria-label="주식 연구" data-reveal>
-    <ResearchToday day={researchDays[0]} performance={performance} />
-  </section>
-
-  <section class="shell news" aria-labelledby="news-h" data-reveal>
-    <div class="news-head"><h2 id="news-h">최근 소식</h2><span class="news-sub">반영한 업데이트</span></div>
-    {feed.length > 0 ? (
-      <ol class="feed">
-        {feed.map((item) => (
-          <li>
-            <time datetime={item.date.toISOString().slice(0, 10)}>{formatFeedDate(item.date)}</time>
-            <span class="kind" data-kind={item.kind}>{FEED_LABEL[item.kind]}</span>
-            {item.href ? <a href={item.href}>{item.title}</a> : <span>{item.title}</span>}
-          </li>
-        ))}
-      </ol>
-    ) : <p class="empty-note">날짜가 확인된 소식이 생기면 여기에 모입니다.</p>}
-    <nav class="topics" aria-label="주제별로 보기">
-      <span class="topics-label">주제별</span>
-      {topics.map(([href, label]) => <a href={href}>{label}</a>)}
+    <nav class="d-makes" aria-label="만드는 것">
+      <ul>{makes.map((m, i) => <li style={`--i:${i}`}><a href={m.href}><b>{m.name}</b><span>{m.note}</span><i aria-hidden="true">↓</i></a></li>)}</ul>
     </nav>
   </section>
 
-  <section class="shell play-wrap" aria-labelledby="play-h" data-reveal>
-    <div class="play">
-      <span class="signal" aria-hidden="true"></span>
-      <div class="play-text">
-        <h2 id="play-h">반응속도 테스트</h2>
-        <p>초록으로 바뀌는 순간 눌러 5번의 평균을 재 보세요.</p>
+  {/* ② Today's picks: the existing research component and data, no motion in front of it. */}
+  <section id="today" class="d-today shell" aria-labelledby="d-today-h">
+    <div class="d-today-side">
+      <h2 id="d-today-h">오늘의 추천</h2>
+      <p>모델마다 고른 최종 1순위 종목과, 그 종목을 사는 기본 전략의 모의 성과입니다.</p>
+      <a class="d-link" href="/research#records">날짜별 기록 <span aria-hidden="true">→</span></a>
+    </div>
+    <div class="d-today-table">
+      <ResearchToday day={researchDays[0]} performance={performance} titled />
+    </div>
+    <div class="d-today-chart">
+      <PerformanceChart days={researchDays} performance={performance} />
+    </div>
+  </section>
+
+  {/* ③ 폐품 공장 */}
+  <section id="jf" class="d-jf-head shell" aria-labelledby="d-jf-h">
+    <p class="d-eyebrow">Roblox 게임 · {stageLabel(game)}</p>
+    <h2 id="d-jf-h">{game.data.title}</h2>
+    <p class="d-sub">{game.data.tagline}</p>
+  </section>
+  <section class="d-scroll" aria-label="폐품 공장이 돌아가는 방식" data-scroll>
+    <div class="d-sticky">
+      <div class="d-copy">
+        {scenes.map((s, k) => (
+          <div class="d-step" data-step={k} data-active={k === 0 ? 'true' : 'false'}>
+            <span class="d-num">{s.n}</span><h3>{s.h}</h3><p>{s.p}</p>
+          </div>
+        ))}
       </div>
-      <a class="go play-link" href="/play/reaction">테스트하기 <span aria-hidden="true">→</span></a>
+      <div class="d-frame" style="--reveal:0" data-frame>
+        <img class="d-real" src={real.src} alt={real.alt} width={real.width} height={real.height} loading="lazy" decoding="async" />
+        <div class="d-graphic"><FactoryGraphic p={0} id="live" /></div>
+        <p class="d-tag"><span data-tag-g>설명용 그래픽</span><span data-tag-r>실제 게임 화면 · {real.caption}</span></p>
+      </div>
+    </div>
+  </section>
+  <section class="d-stills shell" aria-label="폐품 공장이 돌아가는 방식">
+    {scenes.map((s, k) => (
+      <article class="d-still" data-still>
+        <div class="d-still-copy"><span class="d-num">{s.n}</span><h3>{s.h}</h3><p>{s.p}</p></div>
+        <figure class="d-still-fig"><FactoryGraphic p={STILL[k]!} id={`still-${k}`} /><figcaption class="d-tag-static">설명용 그래픽</figcaption></figure>
+      </article>
+    ))}
+    <figure class="d-still-real"><img src={real.src} alt={real.alt} width={real.width} height={real.height} loading="lazy" decoding="async" /><figcaption class="d-tag-static">실제 게임 화면 · {real.caption}</figcaption></figure>
+  </section>
+  {/* Right under the real screen: one line, the current work, the two actions. */}
+  <section class="d-jf-after shell" aria-label="폐품 공장 플레이">
+    <div>
+      <p class="d-strong">지금, Roblox에서 운영 중.</p>
+      {gameNow && <p class="d-now"><span>지금 하는 일</span>{gameNow}</p>}
+    </div>
+    <div class="d-actions">
+      {game.data.playUrl && <a class="d-btn d-btn-main" href={game.data.playUrl} target="_blank" rel="noopener">플레이하기<span class="sr-only"> (새 창)</span></a>}
+      <a class="d-btn d-btn-line" href={`/projects/${game.id}/`}>프로젝트 소개</a>
     </div>
   </section>
 
-  <section class="shell more" aria-label="다른 프로젝트와 지난 연구" data-reveal>
-    <div>
-      <div class="more-head"><h2>다른 프로젝트</h2><a class="go" href="/projects">전체 <span aria-hidden="true">→</span></a></div>
-      <ul class="plist">
-        {others.map((p) => (
-          <li><a href={`/projects/${p.id}/`}>
-            <strong>{p.data.title}</strong>
-            <span class="psum">{projectSummary(p)}</span>
-            {stageLabel(p) && <span class="pstage">{stageLabel(p)}</span>}
-          </a></li>
+  {/* ④ 롱야봇: one large real screen; three features switch it. */}
+  <section id="bot" class="d-bot shell" aria-labelledby="d-bot-h" data-bot data-reveal>
+    <div class="d-bot-text">
+      <p class="d-eyebrow">Discord 봇 · {stageLabel(bot)}</p>
+      <h2 id="d-bot-h">{bot.data.title}</h2>
+      <p class="d-sub">{bot.data.tagline}</p>
+      <div class="d-bot-tabs" role="group" aria-label="기능 고르기">
+        {botViews.map((v, i) => (
+          <button type="button" class="d-bot-tab" data-view={v.id} aria-pressed={i === 0 ? 'true' : 'false'} aria-controls="d-bot-screen">
+            <b>{v.label}</b><span>{v.text}</span>
+          </button>
         ))}
-      </ul>
+      </div>
+      <p class="d-fine">세 화면은 서로 다른 시점의 실제 Discord 화면입니다. {bot.data.notice}</p>
+      <a class="d-link" href={`/projects/${bot.id}/`}>프로젝트 소개 <span aria-hidden="true">→</span></a>
     </div>
-    <div>
-      <div class="more-head"><h2>지난 연구</h2><a class="go" href="/research">연구 기록 <span aria-hidden="true">→</span></a></div>
-      <ul class="plist research-list">
-        {pastResearch.map((p) => (
-          <li><a href={`/projects/${p.id}/`}>
-            <strong>{p.data.title}</strong>
-            <span class="psum">{p.data.result ?? projectSummary(p)}</span>
-            {stageLabel(p) && <span class="pstage">{stageLabel(p)}</span>}
-          </a></li>
-        ))}
-      </ul>
+    <div id="d-bot-screen" class="d-bot-screen">
+      {botViews.map((v, i) => (
+        <figure class="d-bot-shot" data-shot={v.id} data-active={i === 0 ? 'true' : 'false'}>
+          <a href={v.s.src} data-lightbox data-caption={v.s.caption} data-alt={v.s.alt} aria-label={`${v.s.caption} 크게 보기`}>
+            <img src={v.s.src} alt={v.s.alt} width={v.s.width} height={v.s.height} loading="lazy" decoding="async" />
+          </a>
+          <figcaption>실제 화면 · {v.s.caption}</figcaption>
+        </figure>
+      ))}
     </div>
   </section>
 
-  <section class="shell contact" aria-labelledby="contact-h" data-reveal>
-    <h2 id="contact-h">같이 만들거나, 물어볼 게 있다면</h2>
-    <a class="contact-mail" href={mailto()}>{CONTACT.email}</a>
-    <div class="contact-actions">
-      <a class="btn btn-primary" href="/contact">문의하기 <span class="arrow" aria-hidden="true">→</span></a>
-      <a class="btn btn-ghost" href="/portfolio">포트폴리오</a>
+  {/* ⑤ 2D 액션 게임 · 지금 하는 일 */}
+  <section id="dev" class="d-dev shell" aria-labelledby="d-dev-h" data-reveal>
+    <figure class="d-dev-fig" data-unveil>
+      <a href={devShot.src} data-lightbox data-caption={devShot.caption} data-alt={devShot.alt} aria-label={`${devShot.caption} 크게 보기`}>
+        <img src={devShot.src} alt={devShot.alt} width={devShot.width} height={devShot.height} loading="lazy" decoding="async" />
+      </a>
+      <figcaption class="d-tag-static">실제 게임 화면 · {devShot.caption}</figcaption>
+    </figure>
+    <div class="d-dev-text">
+      <p class="d-eyebrow">2D 게임 · {dev.data.wip!.status}</p>
+      <h2 id="d-dev-h">{dev.data.title}</h2>
+      <p class="d-sub">{dev.data.summary}</p>
+      <p class="d-now"><span>지금 하는 일</span>{dev.data.wip!.now}</p>
+      <a class="d-link" href={`/projects/${dev.id}/`}>개발 이야기 <span aria-hidden="true">→</span></a>
+    </div>
+  </section>
+
+  {/* ⑥ Updates already applied (in-progress work lives in each project above). */}
+  <section class="d-updates shell" aria-labelledby="d-up-h" data-reveal>
+    <div class="d-row-head"><h2 id="d-up-h">최근 업데이트</h2><span>반영을 마친 기록</span></div>
+    <ol class="d-feed">
+      {feed.map((item) => (
+        <li>
+          <time datetime={item.date.toISOString().slice(0, 10)}>{formatFeedDate(item.date)}</time>
+          <span class="d-kind">{FEED_LABEL[item.kind]}</span>
+          {item.href ? <a href={item.href}>{item.title}</a> : <span>{item.title}</span>}
+        </li>
+      ))}
+    </ol>
+  </section>
+
+  {/* ⑦ The rest. */}
+  <section class="d-more shell" aria-label="다른 프로젝트와 지난 연구" data-reveal>
+    <div>
+      <div class="d-row-head"><h2>다른 프로젝트</h2><a class="d-link" href="/projects">전체 <span aria-hidden="true">→</span></a></div>
+      <ul class="d-plist">{others.map((p) => <li><a href={`/projects/${p.id}/`}><strong>{p.data.title}</strong><span class="psum">{projectSummary(p)}</span>{stageLabel(p) && <span class="pstage">{stageLabel(p)}</span>}</a></li>)}</ul>
+    </div>
+    <div>
+      <div class="d-row-head"><h2>지난 연구</h2><a class="d-link" href="/research">연구 기록 <span aria-hidden="true">→</span></a></div>
+      <ul class="d-plist">{pastResearch.map((p) => <li><a href={`/projects/${p.id}/`}><strong>{p.data.title}</strong><span class="psum">{p.data.result ?? projectSummary(p)}</span>{stageLabel(p) && <span class="pstage">{stageLabel(p)}</span>}</a></li>)}</ul>
+    </div>
+  </section>
+  <section class="d-play shell" aria-labelledby="d-play-h">
+    <div class="d-play-in">
+      <span class="d-signal" aria-hidden="true"></span>
+      <div><h2 id="d-play-h">반응속도 테스트</h2><p>초록으로 바뀌는 순간 눌러 5번의 평균을 재 보세요.</p></div>
+      <a class="d-link d-play-link" href="/play/reaction">테스트하기 <span aria-hidden="true">→</span></a>
+    </div>
+  </section>
+  <section class="d-contact shell" aria-labelledby="d-contact-h">
+    <h2 id="d-contact-h">같이 만들거나, 물어볼 게 있다면</h2>
+    <a class="d-mail" href={mailto()}>{CONTACT.email}</a>
+    <div class="d-actions">
+      <a class="d-btn d-btn-main" href="/contact">문의하기</a>
+      <a class="d-btn d-btn-line" href="/portfolio">포트폴리오</a>
     </div>
   </section>
 </BaseLayout>
+
+<script>
+  import { PIECES, pieceAt, sceneAt, clamp } from '../components/home/factoryModel';
+  const root = document.documentElement;
+  const wide = window.matchMedia('(min-width: 900px)');
+  const still = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  // 롱야봇 features: the buttons switch the one large screen (no timer).
+  document.querySelectorAll<HTMLElement>('[data-bot]').forEach((box) => {
+    const tabs = [...box.querySelectorAll<HTMLButtonElement>('[data-view]')];
+    const shots = [...box.querySelectorAll<HTMLElement>('[data-shot]')];
+    const show = (id: string) => {
+      tabs.forEach((t) => t.setAttribute('aria-pressed', String(t.dataset.view === id)));
+      shots.forEach((s) => { s.dataset.active = String(s.dataset.shot === id); s.inert = s.dataset.shot !== id; });
+    };
+    tabs.forEach((t) => t.addEventListener('click', () => show(t.dataset.view!)));
+    show(tabs[0]!.dataset.view!);
+  });
+
+  // One-time reveals when a still or the 2D screen comes into view.
+  if (!still.matches && 'IntersectionObserver' in window) {
+    const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { threshold: .3 });
+    document.querySelectorAll<HTMLElement>('[data-still], [data-unveil]').forEach((el) => { el.classList.add('will'); io.observe(el); });
+  }
+
+  // 폐품 공장 stage: follows the scroll on wide screens with motion; nothing runs while it is off screen.
+  const section = document.querySelector<HTMLElement>('[data-scroll]');
+  const frame = document.querySelector<HTMLElement>('[data-frame]');
+  const svg = frame?.querySelector<SVGSVGElement>('[data-fg]');
+  if (section && frame && svg) {
+    const pieces = PIECES.map((_, i) => svg.querySelector<SVGGElement>(`[data-piece="${i}"]`)!);
+    const forms = pieces.map((g) => [...g.querySelectorAll<SVGUseElement>('[data-form]')]);
+    const stations = [...svg.querySelectorAll<SVGGElement>('[data-st]')];
+    const links = [...svg.querySelectorAll<SVGPathElement>('.fg-link')];
+    const linkGroup = svg.querySelector<SVGGElement>('[data-links]')!;
+    const line = svg.querySelector<SVGGElement>('[data-line]')!;
+    const hopper = svg.querySelector<SVGGElement>('[data-hopper]')!;
+    const sell = svg.querySelector<SVGGElement>('[data-sell]')!;
+    const steps = [...document.querySelectorAll<HTMLElement>('[data-step]')];
+    let last = -1, req = 0, listening = false;
+    const draw = () => {
+      req = 0;
+      const r = section.getBoundingClientRect();
+      const p = clamp(-r.top / Math.max(1, r.height - innerHeight));
+      if (Math.abs(p - last) < .0005) return;
+      last = p;
+      pieces.forEach((g, i) => {
+        const s = pieceAt(i, p);
+        g.setAttribute('transform', `translate(${s.x.toFixed(1)} ${s.y.toFixed(1)}) rotate(${s.r.toFixed(1)}) scale(${s.s.toFixed(3)})`);
+        forms[i]!.forEach((u) => u.setAttribute('opacity', u.dataset.form === s.form ? '1' : '0'));
+      });
+      const sc = sceneAt(p);
+      line.setAttribute('opacity', sc.line.toFixed(3));
+      hopper.style.setProperty('--lit', sc.hopper.toFixed(3));
+      sell.style.setProperty('--lit', sc.sell.toFixed(3));
+      stations.forEach((st, k) => st.style.setProperty('--lit', sc.lit[k]!.toFixed(3)));
+      linkGroup.setAttribute('opacity', sc.links > 0 ? '1' : '0');
+      links.forEach((l) => l.setAttribute('stroke-dashoffset', (1 - sc.links).toFixed(3)));
+      frame.style.setProperty('--reveal', sc.reveal.toFixed(3));
+      frame.dataset.real = sc.reveal > .5 ? 'true' : 'false';
+      steps.forEach((s, k) => (s.dataset.active = String(k === sc.step)));
+    };
+    const onScroll = () => { if (!req) req = requestAnimationFrame(draw); };
+    const watch = new IntersectionObserver(([e]) => {
+      if (e?.isIntersecting && !listening) { addEventListener('scroll', onScroll, { passive: true }); addEventListener('resize', onScroll); listening = true; onScroll(); }
+      else if (!e?.isIntersecting && listening) { removeEventListener('scroll', onScroll); removeEventListener('resize', onScroll); listening = false; }
+    }, { rootMargin: '100px 0px' });
+    const setMode = () => {
+      const live = wide.matches && !still.matches;
+      root.classList.toggle('d-live', live);
+      if (live) { watch.observe(section); last = -1; onScroll(); } else watch.unobserve(section);
+    };
+    wide.addEventListener('change', setMode);
+    still.addEventListener('change', setMode);
+    setMode();
+  }
+</script>
+
 <style>
-  /* Showcase: black ground with cyan / violet / gold light. Effects are concentrated on the hero and the two
-     featured projects; the bot band gets a quiet edge, the research and everything below stay calm.
-     Under prefers-reduced-motion every movement stops (global rule) and the page is complete without it. */
-
-  /* Hero */
-  .hero { position: relative; isolation: isolate; overflow: hidden; padding: clamp(2rem, 5vw, 4.5rem) 0 clamp(2.5rem, 5vw, 4.5rem); }
-  .hero-light { position: absolute; inset: -20% -10% -10%; z-index: -1; pointer-events: none;
-    background:
-      radial-gradient(38rem 26rem at 18% 30%, rgba(var(--cyan), .16), transparent 70%),
-      radial-gradient(42rem 30rem at 78% 40%, rgba(var(--violet), .2), transparent 70%),
-      radial-gradient(30rem 18rem at 60% 95%, rgba(var(--gold), .08), transparent 70%);
-    /* Fades out before the section edge, so the light never ends in a visible band. */
-    -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent 92%); mask-image: linear-gradient(to bottom, #000 55%, transparent 92%);
+  :global(html.home-d) {
+    --d-ink: #F5F5F7; --d-sub: #A1A1A6; --d-line: #2A2A2E; --d-acc: 62, 230, 222;
+    --d-font: 'Pretendard Variable', 'Pretendard', 'IBM Plex Sans KR', -apple-system, sans-serif;
+    scroll-padding-top: 4.5rem;
+    --home-font: var(--d-font);
   }
-  @media (prefers-reduced-motion: no-preference) and (min-width: 761px) {
-    /* A slow drift of the light (no blinking): about 26 s each way. */
-    .hero-light { animation: drift 26s ease-in-out infinite alternate; will-change: transform; }
+  :global(html.home-d body) { background: #000; color: var(--d-ink); font-family: var(--d-font); }
+  :global(html.home-d main) { font-family: var(--d-font); }
+  .d-eyebrow { margin: 0; color: var(--d-sub); font: 600 .95rem/1.4 var(--d-font); }
+  .d-sub { margin: .4rem 0 0; color: var(--d-sub); font: 600 clamp(1.05rem, 1.4vw, 1.3rem)/1.45 var(--d-font); letter-spacing: -.02em; }
+  .d-strong { margin: 0; font: 800 clamp(1.4rem, 2.2vw, 1.9rem)/1.2 var(--d-font); letter-spacing: -.035em; }
+  .d-now { display: grid; gap: .1rem; margin: .5rem 0 0; color: var(--d-ink); font: 500 1rem/1.55 var(--d-font); }
+  .d-now span { color: rgb(var(--d-acc)); font: 700 .8rem var(--d-font); }
+  .d-fine { margin: 0; color: var(--d-sub); font: 500 .85rem/1.5 var(--d-font); }
+  .d-link { display: inline-flex; align-items: center; gap: .35rem; min-height: 2.75rem; font: 700 .95rem var(--d-font); }
+  .d-link span { transition: transform var(--base) var(--ease); }
+  .d-link:hover span, .d-link:focus-visible span { transform: translateX(4px); }
+  .d-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 3rem; padding: 0 1.4rem; border-radius: 999px; font: 600 1rem var(--d-font); white-space: nowrap;
+    transition: transform 160ms var(--ease), background-color 200ms, border-color 200ms; }
+  .d-btn-main { background: var(--d-ink); color: #000; }
+  .d-btn-main:hover, .d-btn-main:focus-visible { background: #fff; transform: translateY(-1px); }
+  .d-btn-line { border: 1px solid #6E6E73; color: var(--d-ink); }
+  .d-btn-line:hover, .d-btn-line:focus-visible { border-color: var(--d-ink); transform: translateY(-1px); }
+  .d-btn:active { transform: scale(.97); }
+  .d-actions { display: flex; flex-wrap: wrap; gap: .6rem; }
+
+  /* ① Intro: about a third of the first screen. */
+  .d-intro { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: end; gap: 1.5rem clamp(2rem, 5vw, 4rem); padding-block: clamp(1.4rem, 3.5vh, 2.6rem) clamp(1.2rem, 3vh, 2rem); }
+  .d-word { display: flex; margin: 0; overflow: hidden; padding-bottom: .04em; font: 800 clamp(3.4rem, 7.2vw, 6.6rem)/.9 var(--d-font); letter-spacing: -.055em; }
+  .d-word .ch { display: inline-block; }
+  .d-lede { margin: .7rem 0 1.1rem; font: 700 clamp(1.15rem, 1.8vw, 1.55rem)/1.35 var(--d-font); letter-spacing: -.03em; }
+  .d-makes ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; margin: 0; padding: 0; list-style: none; }
+  .d-makes a { position: relative; display: grid; gap: .05rem; min-height: 3.6rem; padding: .6rem .9rem; border: 1px solid var(--d-line); border-radius: 12px; transition: border-color 200ms, background-color 200ms; }
+  .d-makes a:hover, .d-makes a:focus-visible { border-color: #6E6E73; background: #0E0E10; }
+  .d-makes b { font: 700 1.05rem/1.3 var(--d-font); }
+  .d-makes span { color: var(--d-sub); font: 500 .82rem var(--d-font); }
+  .d-makes i { position: absolute; right: .9rem; top: 50%; transform: translateY(-50%); color: var(--d-sub); font-style: normal; transition: transform var(--base) var(--ease); }
+  .d-makes a:hover i, .d-makes a:focus-visible i { transform: translateY(-30%); }
+  @media (prefers-reduced-motion: no-preference) {
+    .d-word .ch { animation: d-rise 700ms var(--ease) calc(var(--i) * 40ms) both; }
+    .d-makes li { animation: d-fade 500ms var(--ease) calc(200ms + var(--i) * 50ms) both; }
   }
-  @keyframes drift { from { transform: translate3d(-2%, -1%, 0) scale(1); } to { transform: translate3d(2%, 2%, 0) scale(1.06); } }
-  .hero-in { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr); align-items: center; gap: clamp(1.5rem, 4vw, 4rem); }
-  .hero-kicker { margin: 0 0 1rem; color: var(--muted); font: 700 .78rem var(--body); letter-spacing: .14em; }
-  .hero h1 { margin: 0; font: 800 clamp(2.5rem, 5vw, 4.9rem)/1.06 var(--display); letter-spacing: -.05em; }
-  .hero h1 span { display: block; }
-  @media (min-width: 1024px) { .hero h1 span { white-space: nowrap; } }
-  .hero h1 em { font-style: normal; background: linear-gradient(90deg, rgb(var(--cyan)), rgb(var(--violet))); -webkit-background-clip: text; background-clip: text; color: transparent; }
-  .hero-sub { margin: 1.25rem 0 0; max-width: 34rem; color: var(--text); font: 500 clamp(1.02rem, 1.4vw, 1.2rem)/1.6 var(--body); }
-  .hero-actions { display: flex; flex-wrap: wrap; gap: .7rem; margin-top: 1.75rem; }
-  .hero-actions .btn { min-height: 3.2rem; padding-inline: 1.6rem; }
+  @keyframes d-rise { from { transform: translateY(105%); } }
+  @keyframes d-fade { from { opacity: 0; transform: translateY(8px); } }
 
-  /* Buttons on Home: a clear lit ring on hover / focus, a press on :active (global). */
-  .glow-btn { transition: color var(--fast), background-color var(--fast), box-shadow var(--base) var(--ease), transform 140ms var(--ease); }
-  .glow-btn:hover, .glow-btn:focus-visible { box-shadow: 0 0 0 1px rgba(var(--cyan), .9), 0 10px 32px -10px rgba(var(--cyan), .75); }
-  .btn-ghost:hover, .btn-ghost:focus-visible { border-color: rgba(var(--violet), .9); }
+  /* ② Today's picks: the title beside the table on wide screens, so the model rows are on the first screen.
+     The table is narrower than the page, which closes the gap between the stock and the numbers. */
+  /* Wide: title and the graph on the left, the table on the right (rows on the first screen).
+     Phones: title, the table, then the graph - the graph never pushes the picks down. */
+  .d-today { display: grid; grid-template-columns: minmax(16rem, 1fr) minmax(0, 46rem); grid-template-areas: 'side table' 'chart table';
+    grid-template-rows: auto 1fr; gap: 1.6rem clamp(2rem, 4vw, 3.5rem); align-items: start; padding-block: .4rem clamp(3rem, 7vw, 5rem); }
+  .d-today-side { grid-area: side; }
+  .d-today-table { grid-area: table; }
+  .d-today-chart { grid-area: chart; min-width: 0; }
+  .d-today-side { display: grid; gap: .4rem; justify-items: start; padding-top: 1rem; border-top: 2px solid var(--d-ink); }
+  .d-today-side h2 { margin: 0; font: 800 clamp(1.8rem, 2.8vw, 2.4rem)/1.1 var(--d-font); letter-spacing: -.04em; }
+  .d-today-side p { margin: 0; color: var(--d-sub); font: 500 .98rem/1.55 var(--d-font); }
 
-  /* Hero images: the game's key art, and a smaller real build screen of the 2D game over its corner. Full images,
-     never cropped; their light is a soft edge, not a filter over the picture. */
-  /* The front image overlaps only the bottom edge of the key art (about 5% of its height), away from the
-     character and the machine, and never covers the key art's caption. */
-  .hero-visual { position: relative; padding-bottom: 19%; }
-  .hv { position: relative; margin: 0; }
-  .hv img { width: 100%; height: auto; border-radius: 16px; }
-  .hv-back img { aspect-ratio: 1400 / 788; box-shadow: 0 0 0 1px rgba(var(--cyan), .35), 0 24px 70px -24px rgba(var(--cyan), .55), 0 0 90px -30px rgba(var(--violet), .7); }
-  .hv-front { position: absolute; right: -2%; bottom: 0; width: 42%; }
-  .hv-front img { aspect-ratio: 16 / 9; border: 1px solid rgba(var(--gold), .55); box-shadow: 0 18px 50px -18px rgba(0, 0, 0, .9), 0 0 40px -12px rgba(var(--gold), .6); }
-  .hv figcaption { margin-top: .4rem; color: var(--muted); font: 600 .74rem/1.35 var(--body); }
-  .hv-front figcaption { text-shadow: 0 1px 6px #000; }
-
-  /* Section heads */
-  .sec-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: .4rem 1.25rem; margin-bottom: clamp(1rem, 2vw, 1.5rem); }
-  .sec-head h2 { margin: 0; font: 800 clamp(1.8rem, 3.4vw, 2.8rem)/1.05 var(--display); letter-spacing: -.045em; }
-  .sec-mark { color: transparent; -webkit-text-stroke: 1px rgba(var(--light), .28); font: 800 clamp(1.4rem, 3vw, 2.4rem)/1 var(--display); letter-spacing: -.02em; }
-  .sec-head .go { margin-left: auto; }
-
-  /* Featured projects: two sizes, image first. */
-  .projects { margin-top: clamp(1rem, 3vw, 2.5rem); }
-  .show-grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: clamp(1.25rem, 2.6vw, 2.25rem); align-items: start; }
-  .show { --edge: var(--cyan); display: grid; gap: .9rem; min-width: 0; }
-  .show-dev { --edge: var(--gold); }
-  .show-img { position: relative; display: block; overflow: hidden; border-radius: 16px; background: #000;
-    box-shadow: 0 0 0 1px rgba(var(--edge), .35), 0 20px 60px -30px rgba(var(--edge), .6);
-    transition: box-shadow var(--base) var(--ease); }
-  .show-img img { width: 100%; height: auto; transition: transform 700ms var(--ease); }
-  .show-lead .show-img img { aspect-ratio: 1486 / 760; }
-  .show-dev .show-img img { aspect-ratio: 16 / 9; }
-  .zoom { position: absolute; right: .7rem; bottom: .7rem; padding: .25rem .6rem; border-radius: 999px; background: rgba(9, 10, 13, .78); color: #fff; font: 700 .74rem var(--body); }
-  .show:hover .show-img, .show-img:focus-visible { box-shadow: 0 0 0 1px rgba(var(--edge), .95), 0 0 0 4px rgba(var(--edge), .14), 0 24px 70px -24px rgba(var(--edge), .85); }
-  @media (hover: hover) and (prefers-reduced-motion: no-preference) {
-    .show:hover .show-img img { transform: scale(1.035); }
+  /* ③ 폐품 공장 */
+  .d-jf-head { display: grid; justify-items: center; gap: .3rem; padding-block: clamp(4rem, 10vh, 7rem) 1rem; text-align: center; border-top: 1px solid var(--d-line); }
+  .d-jf-head h2, .d-bot-text h2, .d-dev-text h2 { margin: 0; font: 800 clamp(3rem, 7vw, 6rem)/1 var(--d-font); letter-spacing: -.05em; }
+  .d-scroll { display: none; }
+  :global(html.home-d.d-live) .d-scroll { display: block; height: 220vh; }
+  :global(html.home-d.d-live) .d-stills { display: none; }
+  .d-sticky { position: sticky; top: 3.75rem; height: calc(100svh - 3.75rem); display: grid; grid-template-rows: auto minmax(0, 1fr); justify-items: center; align-content: start; gap: 1rem; padding: 2vh var(--gutter) 2vh; }
+  .d-copy { display: grid; grid-template-areas: 'a'; justify-items: center; text-align: center; min-height: 8.6rem; }
+  .d-step { grid-area: a; display: grid; justify-items: center; gap: .25rem; transition: opacity 400ms var(--ease), transform 500ms var(--ease); }
+  .d-step[data-active='false'] { opacity: 0; transform: translateY(12px); }
+  .d-num { color: rgb(var(--d-acc)); font: 700 .9rem var(--d-font); letter-spacing: .04em; }
+  .d-step h3, .d-still h3 { margin: 0; font: 800 clamp(2.4rem, 4.8vw, 4.4rem)/1.02 var(--d-font); letter-spacing: -.05em; }
+  .d-step p, .d-still p { margin: .3rem 0 0; color: var(--d-sub); font: 600 clamp(1rem, 1.25vw, 1.2rem)/1.5 var(--d-font); }
+  .d-frame { position: relative; width: min(1180px, 100%, calc((100svh - 3.75rem - 13rem) * 1.955)); aspect-ratio: 1486 / 760; border-radius: 20px; overflow: hidden; background: #0B0B0D; box-shadow: 0 0 0 1px var(--d-line); }
+  .d-real { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; clip-path: circle(calc(var(--reveal) * 75%) at 60% 55%); }
+  .d-graphic { position: absolute; inset: 0; opacity: calc(1 - var(--reveal) * 1.15); }
+  .d-graphic :global(svg), .d-still-fig :global(svg) { width: 100%; height: 100%; display: block; }
+  .d-tag { position: absolute; left: 1rem; top: 1rem; margin: 0; }
+  .d-tag span { display: inline-block; padding: .3rem .7rem; border-radius: 999px; background: rgba(0, 0, 0, .74); font: 600 .8rem var(--d-font); transition: opacity 300ms; }
+  .d-tag [data-tag-r] { position: absolute; left: 0; top: 0; white-space: nowrap; opacity: 0; }
+  .d-frame[data-real='true'] [data-tag-g] { opacity: 0; }
+  .d-frame[data-real='true'] [data-tag-r] { opacity: 1; }
+  .d-tag-static { position: absolute; left: .7rem; top: .7rem; padding: .25rem .6rem; border-radius: 999px; background: rgba(0, 0, 0, .74); color: var(--d-ink); font: 600 .75rem var(--d-font); }
+  .d-stills { display: grid; gap: clamp(2.5rem, 7vw, 4rem); padding-block: 1rem 0; }
+  .d-still { display: grid; gap: 1rem; }
+  .d-still-copy { display: grid; justify-items: center; text-align: center; }
+  .d-still-fig, .d-still-real { position: relative; margin: 0; border-radius: 16px; overflow: hidden; background: #0B0B0D; box-shadow: 0 0 0 1px var(--d-line); }
+  .d-still-fig { aspect-ratio: 1486 / 760; }
+  .d-still-real img { width: 100%; height: auto; }
+  @media (prefers-reduced-motion: no-preference) {
+    .d-still.will .d-still-fig { opacity: 0; transform: translateY(14px); }
+    .d-still.will.in .d-still-fig { opacity: 1; transform: none; transition: opacity 600ms var(--ease), transform 700ms var(--ease); }
+    .d-still.in :global(.fg-link) { animation: d-draw 900ms var(--ease) 250ms both; }
   }
-  .show-body { display: grid; gap: .55rem; justify-items: start; }
-  .chip { margin: 0; padding: .2rem .65rem; border: 1px solid; border-radius: 999px; font: 700 .76rem/1.4 var(--body); }
-  .chip-cyan { border-color: rgba(var(--cyan), .6); color: rgb(var(--cyan)); background: rgba(var(--cyan), .08); }
-  .chip-gold { border-color: rgba(var(--gold), .6); color: rgb(var(--gold)); background: rgba(var(--gold), .08); }
-  .chip-violet { border-color: rgba(var(--violet), .65); color: #C9B3FF; background: rgba(var(--violet), .1); }
-  .show h3 { margin: 0; font: 800 clamp(1.7rem, 3vw, 2.6rem)/1.05 var(--display); letter-spacing: -.045em; }
-  .show h3 small { display: block; margin-top: .3rem; color: var(--faint); font: 500 .82rem var(--body); letter-spacing: 0; }
-  .show-dev h3 { font-size: clamp(1.45rem, 2.4vw, 2rem); }
-  .show-sum { margin: 0; max-width: 40rem; color: var(--text); font-size: 1rem; line-height: 1.6; }
-  .show-now { display: grid; gap: .1rem; margin: 0; color: var(--muted); font-size: .94rem; line-height: 1.6; }
-  .show-now span { color: var(--faint); font: 700 .76rem var(--body); }
-  .show-cap { margin: 0; color: var(--faint); font-size: .8rem; }
-  .show-thumbs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; width: 100%; margin: .2rem 0 0; padding: 0; list-style: none; }
-  .show-thumbs a { display: grid; gap: .3rem; }
-  .show-thumbs img { width: 100%; height: auto; aspect-ratio: 16 / 7; object-fit: cover; border: 1px solid var(--line-strong); border-radius: 10px; transition: border-color var(--fast); }
-  .show-thumbs span { color: var(--muted); font: 600 .78rem/1.35 var(--body); }
-  .show-thumbs a:hover img, .show-thumbs a:focus-visible img { border-color: rgba(var(--cyan), .9); }
-  .show-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1.25rem; margin-top: .3rem; }
-  .show-actions .btn { min-height: 3rem; }
-  .tri { width: 0; height: 0; border-block: .38em solid transparent; border-left: .62em solid currentColor; }
-  .show:hover .show-actions .go span { transform: translateX(4px); }
-  .go { display: inline-flex; align-items: center; gap: .35rem; min-height: 2.75rem; font: 700 .92rem var(--body); }
-  .go span { transition: transform var(--base) var(--ease); }
-  .go:hover span, .go:focus-visible span { transform: translateX(4px); }
-  .go:active { opacity: .75; }
+  @keyframes d-draw { from { stroke-dashoffset: 1; } }
+  .d-jf-after { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem 2rem; padding-block: 1.2rem clamp(4rem, 9vw, 6rem); }
+  .d-jf-after > div:first-child { max-width: 44rem; }
 
-  /* 롱야봇: a wide band. A quiet violet edge, no moving light. */
-  .bot-band { margin-top: clamp(3rem, 6vw, 5rem); }
-  .bot-in { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: clamp(1.25rem, 3vw, 2.75rem); align-items: center;
-    padding: clamp(1.25rem, 3vw, 2.25rem); border: 1px solid rgba(var(--violet), .35); border-radius: 20px;
-    background: linear-gradient(120deg, rgba(var(--violet), .12), rgba(9, 10, 13, 0) 55%), #0E1016; }
-  .bot-text { display: grid; gap: .7rem; justify-items: start; }
-  .bot-text h2 { margin: 0; font: 800 clamp(2.2rem, 4.6vw, 3.8rem)/1 var(--display); letter-spacing: -.05em; }
-  .bot-sum { margin: 0; font-size: 1.02rem; line-height: 1.6; }
-  .bot-points { display: flex; flex-wrap: wrap; gap: .45rem; margin: 0; padding: 0; list-style: none; }
-  .bot-points li { padding: .3rem .75rem; border: 1px solid rgba(var(--violet), .45); border-radius: 10px; font: 700 .88rem var(--body); }
-  .bot-note { margin: 0; color: var(--faint); font-size: .82rem; }
-  .bot-shots { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: .75rem; margin: 0; padding: 0; list-style: none; align-items: start; }
-  .bot-shots li { display: grid; gap: .3rem; min-width: 0; }
-  .bot-shots li.main { grid-row: span 2; }
-  .bot-shots a { display: block; overflow: hidden; border: 1px solid var(--line-strong); border-radius: 10px; background: #000; transition: border-color var(--fast); }
-  .bot-shots a:hover, .bot-shots a:focus-visible { border-color: rgba(var(--violet), .95); }
-  .bot-shots img { width: 100%; height: auto; }
-  .bot-cap { color: var(--muted); font: 600 .78rem/1.35 var(--body); }
+  /* ④ 롱야봇 */
+  .d-bot { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: clamp(1.5rem, 4vw, 4rem); align-items: center; padding-block: clamp(4rem, 9vw, 6rem); border-top: 1px solid var(--d-line); }
+  .d-bot-text { display: grid; gap: .8rem; justify-items: start; }
+  .d-bot-tabs { display: grid; gap: .4rem; width: 100%; margin-top: .4rem; }
+  .d-bot-tab { position: relative; display: grid; gap: .1rem; width: 100%; padding: .8rem 1rem .8rem 1.2rem; border: 0; border-radius: 12px; background: transparent; color: var(--d-sub); text-align: left; cursor: pointer; transition: background-color 250ms, color 250ms; }
+  .d-bot-tab::before { content: ''; position: absolute; left: 0; top: .8rem; bottom: .8rem; width: 3px; border-radius: 3px; background: var(--d-line); transition: background-color 250ms; }
+  .d-bot-tab b { color: var(--d-ink); font: 700 1.1rem var(--d-font); }
+  .d-bot-tab span { font: 500 .92rem/1.5 var(--d-font); }
+  .d-bot-tab:hover { background: #0E0E10; }
+  .d-bot-tab[aria-pressed='true'] { background: #121214; color: var(--d-ink); }
+  .d-bot-tab[aria-pressed='true']::before { background: rgb(var(--d-acc)); }
+  .d-bot-tab:active { transform: scale(.99); }
+  .d-bot-screen { display: grid; grid-template-areas: 's'; align-items: center; justify-items: center; }
+  .d-bot-shot { grid-area: s; display: grid; gap: .6rem; margin: 0; width: min(100%, 680px); transition: opacity 380ms var(--ease), transform 480ms var(--ease); }
+  .d-bot-shot[data-active='false'] { opacity: 0; transform: translateY(10px) scale(.985); pointer-events: none; }
+  .d-bot-shot a { display: block; overflow: hidden; border-radius: 14px; box-shadow: 0 0 0 1px var(--d-line), 0 30px 60px -30px rgba(var(--d-acc), .35); }
+  .d-bot-shot img { width: 100%; height: auto; transition: transform 600ms var(--ease); }
+  .d-bot-shot a:hover img { transform: scale(1.02); }
+  .d-bot-shot figcaption { color: var(--d-sub); font: 600 .85rem var(--d-font); }
 
-  /* 주식 연구: full width, calm. */
-  .research { margin-top: clamp(3rem, 6vw, 5rem); }
-
-  /* News, reaction test, other projects, contact: plain ruled lists. */
-  .news { display: grid; align-content: start; gap: .5rem; margin-top: clamp(3rem, 6vw, 4.5rem); }
-  .news-head h2 { margin: 0; font: 800 clamp(1.3rem, 2vw, 1.6rem) var(--display); letter-spacing: -.03em; }
-  .news-head { display: flex; align-items: baseline; gap: .6rem; }
-  .news-sub { color: var(--faint); font: 500 .78rem var(--body); }
-  .feed { display: grid; margin: 0; padding: 0; list-style: none; }
-  .feed li { display: grid; grid-template-columns: 5.6rem 4.6rem minmax(0, 1fr); align-items: baseline; gap: .6rem; padding: .6rem 0; border-top: 1px solid var(--line); }
-  .feed li:last-child { border-bottom: 1px solid var(--line); }
-  .feed time { color: var(--faint); font: 500 .8rem var(--body); font-variant-numeric: tabular-nums; }
-  .kind { color: var(--muted); font: 700 .75rem var(--body); white-space: nowrap; }
-  .kind[data-kind='game'] { color: #F5C451; }
-  .kind[data-kind='bot'] { color: #C9B3FF; }
-  .kind[data-kind='site'] { color: rgb(var(--cyan)); }
-  .kind[data-kind='research'] { color: #7BE3AF; }
-  .feed a { display: inline-block; padding-block: .4rem; margin-block: -.4rem; font-weight: 600; background: linear-gradient(currentColor, currentColor) 0 85% / 0 1px no-repeat; transition: background-size var(--base) var(--ease); }
-  .feed a:hover, .feed a:focus-visible { background-size: 100% 1px; }
-  .empty-note { margin: 0; color: var(--muted); }
-  .topics { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; }
-  .topics-label { margin-right: .3rem; color: var(--faint); font: 600 .75rem var(--body); }
-  .topics a { display: inline-flex; align-items: center; min-height: 2.25rem; padding: 0 .8rem; border-radius: 999px; background: rgba(255, 255, 255, .06); color: var(--muted); font: 600 .82rem var(--body); transition: background-color var(--fast), color var(--fast); }
-  .topics a:hover, .topics a:focus-visible { background: var(--text); color: var(--bg); }
-
-  /* Reaction test: a small row. */
-  .play-wrap { margin-top: clamp(1.75rem, 3.5vw, 2.5rem); }
-  .play { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .4rem 1rem; padding: .85rem 0; border-block: 1px solid var(--line); }
-  .signal { width: .9rem; height: .9rem; border-radius: 50%; background: #B42318; box-shadow: 0 0 0 4px rgba(180, 35, 24, .18); transition: background-color 120ms linear, box-shadow 120ms linear; }
-  .play:hover .signal, .play:focus-within .signal { background: #12864A; box-shadow: 0 0 0 4px rgba(18, 134, 74, .22); }
-  .play-text { display: grid; gap: .1rem; min-width: 0; }
-  .play h2 { margin: 0; font: 800 1.1rem/1.2 var(--display); letter-spacing: -.02em; }
-  .play p { margin: 0; color: var(--muted); font-size: .9rem; line-height: 1.45; }
-  .play-link::after { content: ''; position: absolute; inset: 0; }
-  .play:hover .play-link span { transform: translateX(4px); }
-
-  .more { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(1.5rem, 4vw, 3.5rem); margin-top: clamp(2.5rem, 5vw, 4rem); }
-  .more-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: .25rem; }
-  .more-head h2 { margin: 0; font: 800 clamp(1.3rem, 2vw, 1.6rem)/1.1 var(--display); letter-spacing: -.03em; }
-  .plist { display: grid; margin: 0; padding: 0; list-style: none; border-bottom: 1px solid var(--line); }
-  .plist a { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .2rem 1rem; padding: .85rem .25rem; border-top: 1px solid var(--line); transition: background-color var(--fast), padding var(--base) var(--ease); }
-  .plist a:hover, .plist a:focus-visible { background: rgba(var(--light), .05); padding-inline: .75rem; }
-  .plist strong { font: 700 1.1rem var(--display); letter-spacing: -.02em; }
-  .psum { grid-column: 1 / -1; color: var(--muted); font-size: .92rem; line-height: 1.55; }
-  .pstage { grid-column: 2; grid-row: 1; color: var(--faint); font-size: .8rem; white-space: nowrap; }
-
-  .contact { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: .6rem 1.5rem; margin-top: clamp(3rem, 6vw, 5rem); padding-block: clamp(1.75rem, 3vw, 2.5rem); border-top: 1px solid var(--line); }
-  .contact h2 { margin: 0; font: 800 clamp(1.5rem, 3vw, 2.3rem)/1.15 var(--display); letter-spacing: -.04em; }
-  .contact-mail { grid-column: 1; justify-self: start; display: inline-flex; align-items: center; min-height: 2.75rem; color: var(--muted); font: 600 1rem var(--body); background: linear-gradient(currentColor, currentColor) 0 80% / 0 1px no-repeat; transition: background-size var(--base) var(--ease), color var(--fast); }
-  .contact-mail:hover, .contact-mail:focus-visible { color: var(--text); background-size: 100% 1px; }
-  .contact-actions { grid-column: 2; grid-row: 1 / span 2; display: flex; flex-wrap: wrap; gap: .6rem; }
-
-  /* Tablet */
-  @media (max-width: 1023px) {
-    .hero-in { grid-template-columns: minmax(0, 1fr); }
-    .hero-visual { max-width: 44rem; }
-    .show-grid { grid-template-columns: minmax(0, 1fr); }
-    .bot-in { grid-template-columns: minmax(0, 1fr); }
-    .more { grid-template-columns: 1fr; }
+  /* ⑤ 2D 액션 게임 */
+  .d-dev { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: clamp(1.5rem, 4vw, 4rem); align-items: center; padding-block: clamp(4rem, 9vw, 6rem); border-top: 1px solid var(--d-line); }
+  .d-dev-fig { position: relative; margin: 0; border-radius: 18px; overflow: hidden; box-shadow: 0 0 0 1px var(--d-line); }
+  .d-dev-fig img { width: 100%; height: auto; transition: transform 700ms var(--ease); }
+  .d-dev-fig a:hover img { transform: scale(1.02); }
+  /* Reveal: a cover slides off to the right (the image itself is never clipped, so lazy loading works). */
+  @media (prefers-reduced-motion: no-preference) {
+    .d-dev-fig.will::after { content: ''; position: absolute; inset: 0; z-index: 1; background: #000; transform-origin: right; pointer-events: none; }
+    .d-dev-fig.will.in::after { transform: scaleX(0); transition: transform 1000ms var(--ease); }
   }
-  /* Phone: lighter effects (no drifting light, smaller glow), everything reachable without hover. */
-  @media (max-width: 760px) {
-    .hero { padding-top: 1.25rem; }
-    .hero-light { inset: -10% -30% 20%; opacity: .8; }
-    .hv-back img { box-shadow: 0 0 0 1px rgba(var(--cyan), .35), 0 14px 40px -18px rgba(var(--cyan), .5); }
-    /* Phone: the two images stack without overlapping. */
-    .hv-front { position: relative; right: auto; width: 72%; margin: .9rem 0 0 auto; }
-    .hero-visual { padding-bottom: 0; }
-    .sec-mark { display: none; }
-    .show-img { box-shadow: 0 0 0 1px rgba(var(--edge), .45); }
-    .bot-shots { grid-template-columns: minmax(0, 1fr); }
-    .bot-shots li.main { grid-row: auto; }
-    .contact { grid-template-columns: minmax(0, 1fr); }
-    .contact-actions { grid-column: 1; grid-row: auto; }
+  .d-dev-text { display: grid; gap: .5rem; justify-items: start; }
+  .d-dev-text h2 { font-size: clamp(2.4rem, 5vw, 4.4rem); }
+
+  /* ⑥ Updates and ⑦ the rest: compact. */
+  .d-row-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .4rem 1rem; margin-bottom: .4rem; }
+  .d-row-head h2 { margin: 0; font: 800 clamp(1.5rem, 2.4vw, 2rem) var(--d-font); letter-spacing: -.035em; }
+  .d-row-head > span { color: var(--d-sub); font: 500 .85rem var(--d-font); }
+  .d-updates { padding-block: clamp(2.5rem, 6vw, 4rem); border-top: 1px solid var(--d-line); }
+  .d-feed { margin: 0; padding: 0; list-style: none; }
+  .d-feed li { display: grid; grid-template-columns: 7rem 5rem minmax(0, 1fr); align-items: center; gap: 0 .6rem; padding: .2rem 0; border-top: 1px solid var(--d-line); }
+  .d-feed li:last-child { border-bottom: 1px solid var(--d-line); }
+  .d-feed time { color: var(--d-sub); font: 500 .88rem var(--d-font); font-variant-numeric: tabular-nums; }
+  .d-kind { color: var(--d-sub); font: 700 .82rem var(--d-font); }
+  .d-feed a { display: inline-flex; align-items: center; min-height: 2.75rem; font: 600 1rem var(--d-font); background: linear-gradient(currentColor, currentColor) 0 85% / 0 1px no-repeat; transition: background-size var(--base) var(--ease); }
+  .d-feed a:hover, .d-feed a:focus-visible { background-size: 100% 1px; }
+  .d-more { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(1.5rem, 4vw, 3.5rem); padding-block: clamp(2rem, 5vw, 3rem); }
+  .d-plist { display: grid; margin: 0; padding: 0; list-style: none; border-bottom: 1px solid var(--d-line); }
+  .d-plist a { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .2rem 1rem; padding: .85rem .25rem; border-top: 1px solid var(--d-line); transition: background-color 200ms; }
+  .d-plist a:hover, .d-plist a:focus-visible { background: #0E0E10; }
+  .d-plist strong { font: 700 1.08rem var(--d-font); }
+  .d-plist .psum { grid-column: 1 / -1; color: var(--d-sub); font-size: .92rem; line-height: 1.55; }
+  .d-plist .pstage { grid-column: 2; grid-row: 1; color: var(--d-sub); font-size: .8rem; white-space: nowrap; }
+  .d-play-in { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .4rem 1rem; padding: .85rem 0; border-block: 1px solid var(--d-line); }
+  .d-signal { width: .9rem; height: .9rem; border-radius: 50%; background: #B42318; box-shadow: 0 0 0 4px rgba(180, 35, 24, .18); transition: background-color 120ms linear, box-shadow 120ms linear; }
+  .d-play-in:hover .d-signal, .d-play-in:focus-within .d-signal { background: #12864A; box-shadow: 0 0 0 4px rgba(18, 134, 74, .22); }
+  .d-play-in h2 { margin: 0; font: 800 1.1rem/1.2 var(--d-font); }
+  .d-play-in p { margin: 0; color: var(--d-sub); font-size: .9rem; }
+  .d-play-link::after { content: ''; position: absolute; inset: 0; }
+  .d-contact { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: .6rem 1.5rem; padding-block: clamp(2.5rem, 6vw, 4rem) clamp(3rem, 7vw, 5rem); }
+  .d-contact h2 { margin: 0; font: 800 clamp(1.5rem, 3vw, 2.3rem)/1.15 var(--d-font); letter-spacing: -.04em; }
+  .d-mail { grid-column: 1; justify-self: start; display: inline-flex; align-items: center; min-height: 2.75rem; color: var(--d-sub); font: 600 1rem var(--d-font); }
+  .d-mail:hover, .d-mail:focus-visible { color: var(--d-ink); }
+  .d-contact .d-actions { grid-column: 2; grid-row: 1 / span 2; }
+
+  @media (max-width: 1100px) {
+    .d-today { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'side' 'table' 'chart'; grid-template-rows: none; }
+    .d-today-chart { max-width: 40rem; }
+    .d-today-side { grid-template-columns: auto minmax(0, 1fr) auto; align-items: baseline; gap: .2rem 1rem; padding-top: 0; border-top: 0; }
   }
-  @media (max-width: 680px) {
-    .feed li { grid-template-columns: auto 1fr; gap: .2rem .6rem; }
-    .feed li > :last-child { grid-column: 1 / -1; }
-    .hero-actions .btn, .contact-actions, .contact-actions .btn { flex: 1 1 auto; }
+  @media (max-width: 900px) {
+    .d-intro, .d-bot, .d-dev, .d-more { grid-template-columns: minmax(0, 1fr); }
+    .d-dev-fig { order: -1; }
+    /* Phones: the stills keep only the core steps (hopper, belt, sell point); station names are hidden. */
+    .d-still-fig :global([data-minor] text) { display: none; }
   }
-  @media (max-width: 400px) {
-    .show-thumbs { grid-template-columns: minmax(0, 1fr); }
+  @media (max-width: 700px) {
+    .d-intro { padding-block: 1rem 1rem; gap: 1rem; }
+    .d-word { font-size: clamp(3rem, 17vw, 4.4rem); }
+    .d-lede { margin: .5rem 0 .9rem; }
+    .d-actions .d-btn { flex: 1 1 8rem; }
+    .d-makes a { min-height: 3.2rem; padding: .45rem .75rem; }
+    .d-today-side { grid-template-columns: minmax(0, 1fr); }
+    .d-today-side p { display: none; }
+    .d-feed li { grid-template-columns: auto 1fr; gap: .2rem .6rem; }
+    .d-feed li > :last-child { grid-column: 1 / -1; }
+    .d-contact { grid-template-columns: minmax(0, 1fr); }
+    .d-contact .d-actions { grid-column: 1; grid-row: auto; }
   }
 </style>

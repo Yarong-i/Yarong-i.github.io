@@ -1,6 +1,7 @@
 ---
 const path = Astro.url.pathname;
-const links: ReadonlyArray<readonly [string, string]> = [['/projects', '프로젝트'], ['/research', '주식 연구'], ['/play', '미니게임'], ['/contact', '문의']];
+// 오늘의 추천: an anchor to today's picks on Home (from every page).
+const links: ReadonlyArray<readonly [string, string]> = [['/#today', '오늘의 추천'], ['/projects', '프로젝트'], ['/research', '주식 연구'], ['/play', '미니게임'], ['/contact', '문의']];
 const isCurrent = (href: string) => path === href || path.startsWith(`${href}/`);
 ---
 <header class="header" data-header>

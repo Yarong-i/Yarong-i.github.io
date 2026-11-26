@@ -40,6 +40,11 @@ Importer rules:
 - Strategy returns are never computed on the site. Per-day returns come from `models[].strategy`, cumulative
   results from `src/content/performance/*.json` (`model`, `strategy: base|filter10`, `asOf`, `cumulativePct`,
   `trades?`, `days?`, `basis`, `source`). Without them the site shows 미연동.
+- Home's 누적 모의 성과 graph (`performanceSeries` in src/utils/research.ts) draws, per model id, each day's own
+  `strategy.base.cumPct` whose `asOf` is that trading day - nothing is computed or carried forward. A trading day
+  without a figure breaks the line (기록 없음); a model with no figure yet reads 집계 전; one figure is one point.
+  잠정/미대조 follow `final` and the latest performance file's `includesProvisional` / `unverifiedCorrections`
+  (the table's sources). A run whose model was not recorded (모델 미기록) is not attributed to any model.
 - Statuses: premarket `pending` (발표 대기) · `published` · `no-picks` (정상 실행, 추천 없음) · `failed` (실행 실패);
   a `failed` premarket with `reasonCode: "EVIDENCE_ALL_EXCLUDED"` is 추천 미발행 ("근거 검증 실패 · 제안 N종목 모두
   제외"): the research system dropped every proposal in its evidence checks (`excluded` keeps each one and its

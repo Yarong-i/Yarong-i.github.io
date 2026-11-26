@@ -1,0 +1,188 @@
+---
+// 누적 모의 성과: each model's base first-choice strategy cumulative, as each day's record states it
+// (performanceSeries in utils/research.ts). Drawn on the server as an SVG, so it reads with no script and no wait.
+// The script adds the legend toggles and a readout for pointer, touch and keyboard. No ranking, no animation.
+import type { Performance, ResearchDay } from '../../utils/research';
+import { formatPct, performanceSeries } from '../../utils/research';
+interface Props { days: ResearchDay[]; performance: Performance[]; }
+const { days, performance } = Astro.props;
+const { dates, series } = performanceSeries(days, performance);
+const W = 420, H = 230, L = 44, R = 12, T = 12, B = 26;
+const all = series.flatMap((s) => s.points.map((p) => p.cum));
+let lo = Math.min(0, ...all), hi = Math.max(0, ...all);
+if (hi - lo < 4) { hi += 2; lo -= 2; }
+const pad = (hi - lo) * .08; lo -= pad; hi += pad;
+const step = [1, 2, 2.5, 5, 10, 20, 25, 50].find((s) => (hi - lo) / s <= 5) ?? 100;
+const ticks: number[] = [];
+for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) ticks.push(Math.round(v * 100) / 100);
+const x = (date: string) => dates.length < 2 ? L + (W - L - R) / 2 : L + (dates.indexOf(date) / (dates.length - 1)) * (W - L - R);
+const y = (v: number) => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
+const md = (d: string) => `${d.slice(5, 7)}.${d.slice(8, 10)}`;
+const xLabels = dates.length ? [...new Set([dates[0]!, dates[Math.floor((dates.length - 1) / 2)]!, dates.at(-1)!])] : [];
+const shape = (m: string, cx: number, cy: number) => {
+  const r = 3.4;
+  if (m === 'square') return `<rect x="${cx - r}" y="${cy - r}" width="${2 * r}" height="${2 * r}" />`;
+  if (m === 'triangle') return `<path d="M${cx} ${cy - r - .6}L${cx + r + .4} ${cy + r - .2}H${cx - r - .4}Z" />`;
+  if (m === 'diamond') return `<path d="M${cx} ${cy - r - 1}L${cx + r + 1} ${cy}L${cx} ${cy + r + 1}L${cx - r - 1} ${cy}Z" />`;
+  if (m === 'cross') return `<path d="M${cx - r} ${cy - r}L${cx + r} ${cy + r}M${cx + r} ${cy - r}L${cx - r} ${cy + r}" stroke-width="2" />`;
+  return `<circle cx="${cx}" cy="${cy}" r="${r}" />`;
+};
+const data = JSON.stringify({ dates, x: dates.map((d) => +x(d).toFixed(1)), W, L, R,
+  series: series.map((s) => ({ model: s.model, name: s.name, color: s.color, points: s.points, missing: s.missing })) });
+const latestDate = dates.at(-1);
+---
+<figure class="pc" data-pc data-chart={data} aria-labelledby="pc-h">
+  <div class="pc-head">
+    <h3 id="pc-h">누적 모의 성과</h3>
+    <p>모델별 시작일이 다릅니다 · 비용 전 · 모의 성과</p>
+  </div>
+  {dates.length === 0 ? (
+    <p class="pc-empty">아직 집계된 누적 성과가 없습니다.</p>
+  ) : (
+    <div class="pc-plot">
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`모델별 누적 모의 성과, ${md(dates[0]!)}부터 ${md(latestDate!)}까지 기록된 날짜만 표시`} tabindex="0" data-pc-svg>
+        {ticks.map((t) => (
+          <g class:list={['pc-tick', { zero: t === 0 }]}>
+            <line x1={L} x2={W - R} y1={y(t)} y2={y(t)} />
+            <text x={L - 6} y={y(t) + 3.5} text-anchor="end">{t > 0 ? '+' : ''}{t}%</text>
+          </g>
+        ))}
+        {xLabels.map((d) => <text class="pc-x" x={x(d)} y={H - 8} text-anchor={d === dates[0] ? 'start' : d === latestDate ? 'end' : 'middle'}>{md(d)}</text>)}
+        <line class="pc-guide" x1="0" x2="0" y1={T} y2={H - B} data-pc-guide />
+        {series.map((s) => (
+          <g class="pc-series" data-series={s.model} style={`--c:${s.color}`}>
+            {s.segments.map((seg) => seg.length > 1 && <polyline points={seg.map((p) => `${x(p.date).toFixed(1)},${y(p.cum).toFixed(1)}`).join(' ')} />)}
+            <g class="pc-marks" set:html={s.points.map((p) => shape(s.marker, x(p.date), y(p.cum))).join('')} />
+          </g>
+        ))}
+      </svg>
+      <div class="pc-read" role="status" aria-live="polite" data-pc-read hidden></div>
+    </div>
+  )}
+  <ul class="pc-legend" aria-label="모델 보이기·숨기기">
+    {series.map((s) => {
+      const last = s.points.at(-1);
+      return (
+        <li>
+          <button type="button" aria-pressed="true" data-toggle={s.model} style={`--c:${s.color}`} disabled={!s.points.length}>
+            <svg class="pc-key" viewBox="0 0 22 12" aria-hidden="true"><line x1="1" x2="21" y1="6" y2="6" /><g set:html={shape(s.marker, 11, 6)} /></svg>
+            <b>{s.name}</b>
+            <span>{last
+              ? `${formatPct(last.cum)} · ${md(last.date)}${s.points.length === 1 ? ' · 기록 1개' : ''}${last.provisional ? ' · 잠정 포함' : ''}${last.unverified ? ' · 미대조 포함' : ''}`
+              : '집계 전'}</span>
+          </button>
+        </li>
+      );
+    })}
+  </ul>
+  <figcaption class="pc-note">기록된 거래일의 누적만 직선으로 잇고, 기록이 빠진 거래일에서는 선을 끊습니다. 같은 기간의 순위가 아닙니다. 점을 누르거나 그래프에서 ←·→ 키로 날짜별 값을 볼 수 있습니다.</figcaption>
+  {dates.length > 0 && (
+    <div class="sr-only"><table>
+      <caption>누적 모의 성과 값</caption>
+      <thead><tr><th scope="col">기준일</th>{series.map((s) => <th scope="col">{s.name}</th>)}</tr></thead>
+      <tbody>{dates.map((d) => <tr><th scope="row">{d}</th>{series.map((s) => { const p = s.points.find((q) => q.date === d); return <td>{p ? `${formatPct(p.cum)}${p.provisional ? ' 잠정 포함' : ''}${p.unverified ? ' 미대조 포함' : ''}` : '기록 없음'}</td>; })}</tr>)}</tbody>
+    </table></div>
+  )}
+</figure>
+
+<script>
+  type P = { date: string; cum: number; provisional: boolean; unverified: boolean };
+  type S = { model: string; name: string; color: string; points: P[]; missing: string[] };
+  const pct = (v: number) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v).toFixed(2)}%`;
+  document.querySelectorAll<HTMLElement>('[data-pc]').forEach((fig) => {
+    const d = JSON.parse(fig.dataset.chart!) as { dates: string[]; x: number[]; W: number; series: S[] };
+    const svg = fig.querySelector<SVGSVGElement>('[data-pc-svg]');
+    const read = fig.querySelector<HTMLElement>('[data-pc-read]');
+    const guide = fig.querySelector<SVGLineElement>('[data-pc-guide]');
+    const hidden = new Set<string>();
+    let idx = -1;
+    let show = (_i: number) => {};
+    fig.querySelectorAll<HTMLButtonElement>('[data-toggle]').forEach((b) => b.addEventListener('click', () => {
+      const id = b.dataset.toggle!;
+      if (hidden.has(id)) hidden.delete(id); else hidden.add(id);
+      b.setAttribute('aria-pressed', String(!hidden.has(id)));
+      fig.querySelector<SVGGElement>(`[data-series="${CSS.escape(id)}"]`)?.classList.toggle('off', hidden.has(id));
+      if (idx >= 0) show(idx);
+    }));
+    if (!svg || !read || !guide || !d.dates.length) return;
+    show = (i: number) => {
+      idx = Math.max(0, Math.min(d.dates.length - 1, i));
+      const date = d.dates[idx]!;
+      guide.setAttribute('x1', String(d.x[idx])); guide.setAttribute('x2', String(d.x[idx]));
+      fig.classList.add('reading');
+      const rows = d.series.filter((s) => !hidden.has(s.model)).map((s) => {
+        const p = s.points.find((q) => q.date === date);
+        const state = p ? `${pct(p.cum)}${p.provisional ? ' · 잠정 포함' : ''}${p.unverified ? ' · 미대조 포함' : ''}`
+          : s.points.length && date < s.points[0]!.date ? '시작 전' : s.missing.includes(date) ? '기록 없음' : s.points.length ? '기록 없음' : '집계 전';
+        return `<li style="--c:${s.color}"><b>${s.name}</b><span>${state}</span></li>`;
+      }).join('');
+      read.innerHTML = `<p>${date.slice(0, 4)}.${date.slice(5, 7)}.${date.slice(8, 10)} 기준</p><ul>${rows}</ul>`;
+      read.hidden = false;
+      // Keep the readout beside the guide and inside the plot (measured in pixels).
+      const pw = svg.getBoundingClientRect().width, rw = read.offsetWidth;
+      const gx = (d.x[idx]! / d.W) * pw;
+      let left = gx + 10 + rw <= pw ? gx + 10 : gx - 10 - rw;
+      left = Math.max(0, Math.min(pw - rw, left));
+      read.style.left = `${left.toFixed(0)}px`; read.style.right = '';
+    };
+    const nearest = (clientX: number) => {
+      const r = svg.getBoundingClientRect();
+      const vx = ((clientX - r.left) / r.width) * d.W;
+      let best = 0;
+      d.x.forEach((v, i) => { if (Math.abs(v - vx) < Math.abs(d.x[best]! - vx)) best = i; });
+      return best;
+    };
+    svg.addEventListener('pointermove', (e) => show(nearest(e.clientX)));
+    svg.addEventListener('pointerdown', (e) => show(nearest(e.clientX)));
+    svg.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse' && document.activeElement !== svg) { read.hidden = true; fig.classList.remove('reading'); } });
+    svg.addEventListener('focus', () => show(idx < 0 ? d.dates.length - 1 : idx));
+    svg.addEventListener('blur', () => { read.hidden = true; fig.classList.remove('reading'); });
+    svg.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') { e.preventDefault(); show(idx - 1); }
+      else if (e.key === 'ArrowRight') { e.preventDefault(); show(idx + 1); }
+      else if (e.key === 'Home') { e.preventDefault(); show(0); }
+      else if (e.key === 'End') { e.preventDefault(); show(d.dates.length - 1); }
+      else if (e.key === 'Escape') { svg.blur(); }
+    });
+  });
+</script>
+
+<style>
+  .pc { display: grid; gap: .7rem; margin: 0; }
+  .pc-head { display: grid; gap: .15rem; }
+  .pc-head h3 { margin: 0; font: 800 1.15rem/1.2 var(--home-font, var(--body)); letter-spacing: -.02em; }
+  .pc-head p, .pc-note { margin: 0; color: #A1A1A6; font: 500 .8rem/1.5 var(--home-font, var(--body)); }
+  .pc-empty { margin: 0; color: #A1A1A6; font-size: .9rem; }
+  /* Width capped so the plot stays about 220-260px tall in the side column. */
+  .pc-plot { position: relative; max-width: 28rem; }
+  .pc-plot svg { display: block; width: 100%; height: auto; overflow: visible; touch-action: pan-y; cursor: crosshair; }
+  .pc-plot svg:focus-visible { outline: 2px solid #F5F5F7; outline-offset: 4px; border-radius: 4px; }
+  .pc-tick line { stroke: #232326; stroke-width: 1; }
+  .pc-tick.zero line { stroke: #4A4A50; }
+  .pc-tick text, .pc-x { fill: #8E8E93; font: 500 10.5px var(--home-font, var(--body)); }
+  .pc-guide { stroke: #6E6E73; stroke-width: 1; stroke-dasharray: 3 3; opacity: 0; }
+  .reading .pc-guide { opacity: 1; }
+  .pc-series polyline { fill: none; stroke: var(--c); stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
+  .pc-series :global(.pc-marks *) { fill: var(--c); stroke: var(--c); }
+  .pc-series :global(.pc-marks circle), .pc-series :global(.pc-marks rect), .pc-series :global(.pc-marks path) { stroke-width: 0; }
+  .pc-series :global(.pc-marks path[stroke-width]) { fill: none; stroke-width: 2; }
+  .pc-series.off { display: none; }
+  .pc-read { position: absolute; top: 0; z-index: 2; min-width: 10rem; max-width: min(15rem, 100%); padding: .55rem .7rem; border: 1px solid #2A2A2E; border-radius: 10px; background: rgba(10, 10, 12, .96); pointer-events: none; }
+  .pc-read :global(p) { margin: 0 0 .3rem; color: #F5F5F7; font: 700 .8rem var(--home-font, var(--body)); }
+  .pc-read :global(ul) { display: grid; gap: .2rem; margin: 0; padding: 0; list-style: none; }
+  .pc-read :global(li) { display: flex; justify-content: space-between; gap: .8rem; font: 500 .78rem/1.35 var(--home-font, var(--body)); color: #D1D1D6; }
+  .pc-read :global(li b) { color: var(--c); font-weight: 700; }
+  .pc-legend { display: flex; flex-wrap: wrap; gap: .35rem; margin: 0; padding: 0; list-style: none; }
+  .pc-legend button, .pc-plot svg { -webkit-tap-highlight-color: transparent; }
+  .pc-legend button { display: grid; grid-template-columns: auto auto; grid-template-rows: auto auto; column-gap: .4rem; align-items: center; min-height: 2.75rem; padding: .3rem .6rem; border: 1px solid #2A2A2E; border-radius: 10px; background: transparent; color: #F5F5F7; text-align: left; cursor: pointer; transition: border-color 200ms, opacity 200ms; }
+  .pc-legend button:hover, .pc-legend button:focus-visible { border-color: #6E6E73; }
+  .pc-legend button[aria-pressed='false'] { opacity: .45; }
+  .pc-legend button[aria-pressed='false'] b { text-decoration: line-through; }
+  .pc-legend button:disabled { cursor: default; opacity: .7; }
+  .pc-key { grid-row: span 2; width: 22px; height: 12px; overflow: visible; }
+  .pc-key line { stroke: var(--c); stroke-width: 1.6; }
+  .pc-key :global(g *) { fill: var(--c); stroke: var(--c); stroke-width: 0; }
+  .pc-key :global(g path[stroke-width]) { fill: none; stroke-width: 2; }
+  .pc-legend b { font: 700 .82rem/1.2 var(--home-font, var(--body)); }
+  .pc-legend span { color: #A1A1A6; font: 500 .74rem/1.25 var(--home-font, var(--body)); font-variant-numeric: tabular-nums; }
+</style>

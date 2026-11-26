@@ -231,3 +231,101 @@ export function modelsIn(days: ResearchDay[]): string[] {
   for (const d of days) for (const m of d.data.models) if (m.model !== UNKNOWN_MODEL && !seen.includes(m.model)) seen.push(m.model);
   return seen;
 }
+
+/* ---------- 누적 모의 성과 graph (Home) ---------- */
+
+/**
+ * Fixed look per model id (never by display name), so GPT-6 Astra and GPT-6.2 Astra never share a colour or a
+ * line. A model not listed here takes the next colour and marker no other model on the graph uses. Markers
+ * differ too, so a line is never told apart by colour alone.
+ */
+const MODEL_LOOK: Record<string, { color: string; marker: Marker }> = {
+  'claude-sonnet-5': { color: '#F5F5F7', marker: 'circle' },
+  'claude-opus-5-5': { color: '#E8A24A', marker: 'square' },
+  'gpt-6-astra': { color: '#5BB8F0', marker: 'triangle' },
+  'claude-fable-5-2': { color: '#C98BE8', marker: 'diamond' },
+  'gpt-6.2-astra': { color: '#4FD39A', marker: 'cross' },
+};
+export type Marker = 'circle' | 'square' | 'triangle' | 'diamond' | 'cross';
+const SPARE = ['#F08A8A', '#B8C45A', '#7FA0FF', '#D6B37A', '#9EE6E0', '#F2C6E8', '#C7C7CC'];
+const MARKERS: Marker[] = ['circle', 'square', 'triangle', 'diamond', 'cross'];
+/** Looks for the models on one graph: listed ids keep theirs, the others take unused ones in order. */
+export function modelLooks(models: string[]): Map<string, { color: string; marker: Marker }> {
+  const out = new Map<string, { color: string; marker: Marker }>();
+  const used = new Set(models.filter((m) => MODEL_LOOK[m]).map((m) => MODEL_LOOK[m]!.color));
+  const palette = [...Object.values(MODEL_LOOK).map((l) => l.color), ...SPARE].filter((c) => !used.has(c));
+  let k = 0;
+  models.forEach((m, i) => {
+    out.set(m, MODEL_LOOK[m] ?? { color: palette[k++ % palette.length]!, marker: MARKERS[i % MARKERS.length]! });
+  });
+  return out;
+}
+
+export interface ChartPoint { date: string; cum: number; provisional: boolean; unverified: boolean; }
+export interface ChartSeries {
+  model: string; name: string; color: string; marker: Marker;
+  points: ChartPoint[];
+  /** Runs of points with no recorded trading day missing between them; a missing day breaks the line. */
+  segments: ChartPoint[][];
+  /** Trading days after the first point with no figure for this model (shown as 기록 없음). */
+  missing: string[];
+}
+
+/**
+ * The base first-choice strategy's cumulative per model and per as-of day, exactly as each day's record states it
+ * (strategy.base with asOf equal to that trading day and a numeric cumPct). Nothing is computed from daily
+ * returns, nothing is carried forward, nothing is drawn before a model's first figure.
+ * - Models are keyed by id, in the order the latest record lists them, then any other model with figures.
+ *   A run whose model was not recorded (모델 미기록) is not attributed to any model.
+ * - 잠정: a day up to this point has final=false, or the latest performance file lists it as provisional.
+ *   미대조: the latest performance file lists a KRX-unverified corrected close on or before this day.
+ *   (The same sources the table uses, so the latest point and the table agree.)
+ */
+export function performanceSeries(days: ResearchDay[], performance: Performance[]): { dates: string[]; series: ChartSeries[] } {
+  const asc = [...days].sort((a, b) => a.data.date.getTime() - b.data.date.getTime());
+  const trading = asc.filter((d) => d.data.market !== 'closed').map((d) => isoDay(d.data.date));
+  const latest = days[0];
+  const order: string[] = [];
+  for (const m of latest?.data.models ?? []) if (m.model !== UNKNOWN_MODEL && !order.includes(m.model)) order.push(m.model);
+  const raw = new Map<string, { date: string; cum: number; final: boolean }[]>();
+  for (const d of asc) {
+    const date = isoDay(d.data.date);
+    for (const m of d.data.models) {
+      if (m.model === UNKNOWN_MODEL) continue;
+      const b = m.strategy?.base;
+      if (!b || b.asOf !== date || !isPct(b.cumPct)) continue;
+      const list = raw.get(m.model) ?? [];
+      if (!list.some((x) => x.date === date)) list.push({ date, cum: b.cumPct, final: b.final });
+      raw.set(m.model, list);
+    }
+  }
+  for (const id of raw.keys()) if (!order.includes(id)) order.push(id);
+  const names = tableNames(latest?.data.models ?? []);
+  const nameOf = (id: string) => names.get(id)
+    ?? (asc.flatMap((d) => d.data.models).reverse().find((m) => m.model === id)?.short)
+    ?? performance.find((p) => p.data.model === id)?.data.short ?? id;
+  const dateSet = new Set<string>();
+  const looks = modelLooks(order);
+  const series = order.map((model) => {
+    const perf = latestPerformance(performance, model);
+    const provList = perf?.data.includesProvisional ?? [];
+    const unvList = perf?.data.unverifiedCorrections ?? [];
+    const list = raw.get(model) ?? [];
+    let anyProvisional = false;
+    const points: ChartPoint[] = list.map((x) => {
+      if (!x.final || provList.includes(x.date)) anyProvisional = true;
+      dateSet.add(x.date);
+      return { date: x.date, cum: x.cum, provisional: anyProvisional || provList.some((d) => d <= x.date), unverified: unvList.some((d) => d <= x.date) };
+    });
+    const segments: ChartPoint[][] = [];
+    const missing: string[] = [];
+    points.forEach((pt, i) => {
+      const prev = points[i - 1];
+      const gap = prev ? trading.filter((t) => t > prev.date && t < pt.date) : [];
+      missing.push(...gap);
+      if (!prev || gap.length) segments.push([pt]); else segments.at(-1)!.push(pt);
+    });
+    return { model, name: nameOf(model), ...looks.get(model)!, points, segments, missing };
+  });
+  return { dates: [...dateSet].sort(), series };
+}

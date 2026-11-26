@@ -1,0 +1,83 @@
+---
+// Home — the 폐품 공장 explainer graphic (설명용 그래픽), right to left like the real screen (model: factoryModel.ts).
+// Station names are quiet (the hopper → belt → 판매기 flow carries the meaning); phones hide them. The live stage updates the same elements
+// from the scroll (see c.astro); stills use it as drawn here.
+import { VW, VH, BELT_Y, HOPPER, SELL, STATIONS, NODES, PIECES, pieceAt, sceneAt } from './factoryModel';
+interface Props { p: number; id: string; }
+const { p, id } = Astro.props;
+const s = sceneAt(p);
+const pieces = PIECES.map((P, i) => ({ ...P, st: pieceAt(i, p) }));
+const FORMS = ['raw', 'block', 'ingot', 'coin'] as const;
+---
+<svg class="fg" viewBox={`0 0 ${VW} ${VH}`} role="img" aria-labelledby={`${id}-t`} data-fg>
+  <title id={`${id}-t`}>설명용 그래픽: 폐품이 오른쪽 투입구로 모여 생산 라인을 왼쪽으로 지나 판매기에서 동전이 되고, 원격 집하장과 자동 공급 설비가 라인을 잇는 흐름</title>
+  <defs>
+    <symbol id={`${id}-can`} viewBox="-16 -20 32 40"><rect x="-11" y="-16" width="22" height="32" rx="5" fill="#8C939E" /><rect x="-11" y="-6" width="22" height="9" fill="#C24B3A" /><rect x="-8" y="-19" width="16" height="4" rx="2" fill="#B9BEC7" /></symbol>
+    <symbol id={`${id}-gear`} viewBox="-20 -20 40 40"><path fill="#A0622F" d="M-3-18h6l1 5 4 2 4-3 4 4-3 4 2 4 5 1v6l-5 1-2 4 3 4-4 4-4-3-4 2-1 5h-6l-1-5-4-2-4 3-4-4 3-4-2-4-5-1v-6l5-1 2-4-3-4 4-4 4 3 4-2z"/><circle r="5" fill="#0B0C0F" /></symbol>
+    <symbol id={`${id}-bottle`} viewBox="-12 -22 24 44"><path fill="#3E8FA3" d="M-4-20h8v8l6 6v24a3 3 0 0 1-3 3H-7a3 3 0 0 1-3-3V-6l6-6z" /><rect x="-4" y="-21" width="8" height="4" fill="#9FD6E2" /></symbol>
+    <symbol id={`${id}-pipe`} viewBox="-22 -10 44 20"><rect x="-20" y="-7" width="40" height="14" rx="3" fill="#7A5A44" /><rect x="-22" y="-9" width="7" height="18" rx="2" fill="#5E4535" /><rect x="15" y="-9" width="7" height="18" rx="2" fill="#5E4535" /></symbol>
+    <symbol id={`${id}-block`} viewBox="-14 -14 28 28"><rect x="-12" y="-12" width="24" height="24" rx="3" fill="#6F7682" /><path d="M-12-4h24M-12 4h24" stroke="#4E545E" stroke-width="2" /></symbol>
+    <symbol id={`${id}-ingot`} viewBox="-18 -12 36 24"><path d="M-12-9h24l5 18h-34z" fill="#F08A3C" /><path d="M-9-5h18" stroke="#FFD08A" stroke-width="3" /></symbol>
+    <symbol id={`${id}-coin`} viewBox="-15 -15 30 30"><circle r="13" fill="#F5C451" /><circle r="8.5" fill="none" stroke="#B8862A" stroke-width="2.5" /></symbol>
+  </defs>
+
+  {/* Automation links (scene 3): drawn from 0 to 1. */}
+  <g class="fg-links" opacity={s.links > 0 ? 1 : 0} data-links>
+    {NODES.map((n) => (
+      <g>
+        <path d={`M${n.x} ${n.y + 28} C ${n.x} ${n.y + 140}, ${n.to.x} ${n.to.y - 130}, ${n.to.x} ${n.to.y}`} pathLength="1" stroke-dasharray="1" stroke-dashoffset={1 - s.links} class="fg-link" />
+        <g transform={`translate(${n.x} ${n.y})`} class="fg-node">
+          <rect x="-96" y="-28" width="192" height="56" rx="14" />
+          <text y="7" text-anchor="middle">{n.name}</text>
+        </g>
+      </g>
+    ))}
+  </g>
+
+  {/* The line: hopper, belt, six stations, sell point. */}
+  <g class="fg-line" opacity={s.line} data-line>
+    <rect x={SELL.x - 50} y={BELT_Y - 8} width={HOPPER.x - SELL.x + 30} height="26" rx="13" class="fg-belt" />
+    <path d={`M${HOPPER.x - 40} ${BELT_Y + 5} H ${SELL.x - 30}`} class="fg-belt-dash" />
+    {STATIONS.map((st, k) => (
+      <g transform={`translate(${st.x} ${BELT_Y})`} class="fg-st" data-st={k} data-minor style={`--lit:${s.lit[k]}`}>
+        <rect x="-54" y="-118" width="108" height="100" rx="12" />
+        <text y="62" text-anchor="middle">{st.name}</text>
+      </g>
+    ))}
+    <g transform={`translate(${SELL.x} ${BELT_Y})`} class="fg-sell" style={`--lit:${s.sell}`} data-sell>
+      <rect x="-46" y="-140" width="92" height="122" rx="12" />
+      <text y="62" text-anchor="middle">{SELL.name}</text>
+    </g>
+  </g>
+
+  <g transform={`translate(${HOPPER.x} ${HOPPER.y})`} class="fg-hopper" style={`--lit:${s.hopper}`} data-hopper>
+    <path d="M-84 -72 H84 L44 70 H-44 Z" />
+    <text y="172" text-anchor="middle">투입구</text>
+  </g>
+
+  {pieces.map((P, i) => (
+    <g data-piece={i} transform={`translate(${P.st.x.toFixed(1)} ${P.st.y.toFixed(1)}) rotate(${P.st.r.toFixed(1)}) scale(${P.st.s.toFixed(3)})`} opacity={P.st.o.toFixed(3)}>
+      {FORMS.map((f) => {
+        const sym = f === 'raw' ? P.kind : f;
+        const size = f === 'raw' ? (P.kind === 'pipe' ? [44, 20] : P.kind === 'bottle' ? [24, 44] : [36, 40]) : f === 'ingot' ? [36, 24] : [30, 30];
+        return <use href={`#${id}-${sym}`} x={-size[0]! / 2} y={-size[1]! / 2} width={size[0]} height={size[1]} data-form={f} opacity={P.st.form === f ? 1 : 0} />;
+      })}
+    </g>
+  ))}
+</svg>
+<style>
+  /* Lit stations and links use one accent (teal); the pieces keep their own material colours. */
+  .fg { font-family: 'Pretendard Variable', 'Pretendard', 'IBM Plex Sans KR', sans-serif; }
+  .fg text { font-size: 22px; font-weight: 700; letter-spacing: -.02em; }
+  .fg-belt { fill: #1C1D21; stroke: #3A3B40; stroke-width: 2; }
+  .fg-belt-dash { stroke: #4A4C52; stroke-width: 3; stroke-dasharray: 10 14; fill: none; }
+  .fg-st rect, .fg-sell rect { fill: rgba(62, 230, 222, calc(.05 + var(--lit, 0) * .2)); stroke: rgba(62, 230, 222, calc(.25 + var(--lit, 0) * .75)); stroke-width: 2; }
+  .fg-st text { font-size: 18px; font-weight: 600; fill: rgba(245, 245, 247, calc(.32 + var(--lit, 0) * .5)); }
+  .fg-sell text, .fg-hopper text { font-size: 26px; fill: rgba(245, 245, 247, calc(.6 + var(--lit, 0) * .4)); }
+  .fg-dir { fill: none; stroke: #6E6E73; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+  .fg-sell rect { fill: rgba(245, 196, 81, calc(.04 + var(--lit, 0) * .18)); stroke: rgba(245, 196, 81, calc(.25 + var(--lit, 0) * .75)); }
+  .fg-hopper path { fill: rgba(245, 245, 247, calc(.04 + var(--lit, 0) * .08)); stroke: rgba(245, 245, 247, calc(.3 + var(--lit, 0) * .7)); stroke-width: 2.5; stroke-linejoin: round; }
+  .fg-link { fill: none; stroke: rgb(62, 230, 222); stroke-width: 3; stroke-linecap: round; }
+  .fg-node rect { fill: #0E1F21; stroke: rgb(62, 230, 222); stroke-width: 2; }
+  .fg-node text { fill: #F5F5F7; font-size: 22px; }
+</style>
