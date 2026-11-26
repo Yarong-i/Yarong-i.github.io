@@ -346,7 +346,7 @@ const makes = [
      The table is narrower than the page, which closes the gap between the stock and the numbers. */
   /* Wide: title and the graph on the left, the table on the right (rows on the first screen).
      Phones: title, the table, then the graph - the graph never pushes the picks down. */
-  .d-today { display: grid; grid-template-columns: minmax(16rem, 1fr) minmax(0, 46rem); grid-template-areas: 'side table' 'chart table';
+  .d-today { display: grid; grid-template-columns: minmax(16rem, 1fr) minmax(0, 38rem); grid-template-areas: 'side table' 'chart table';
     grid-template-rows: auto 1fr; gap: 1.6rem clamp(2rem, 4vw, 3.5rem); align-items: start; padding-block: .4rem clamp(3rem, 7vw, 5rem); }
   .d-today-side { grid-area: side; }
   .d-today-table { grid-area: table; }
@@ -359,7 +359,8 @@ const makes = [
   .d-jf-head { display: grid; justify-items: center; gap: .3rem; padding-block: clamp(4rem, 10vh, 7rem) 1rem; text-align: center; border-top: 1px solid var(--d-line); }
   .d-jf-head h2, .d-bot-text h2, .d-dev-text h2 { margin: 0; font: 800 clamp(3rem, 7vw, 6rem)/1 var(--d-font); letter-spacing: -.05em; }
   .d-scroll { display: none; }
-  :global(html.home-d.d-live) .d-scroll { display: block; height: 220vh; }
+  /* 310vh = 100vh of pinned screen + 210vh of effective scroll for the scenes (was 220vh: 120vh effective). */
+  :global(html.home-d.d-live) .d-scroll { display: block; height: 310vh; }
   :global(html.home-d.d-live) .d-stills { display: none; }
   .d-sticky { position: sticky; top: 3.75rem; height: calc(100svh - 3.75rem); display: grid; grid-template-rows: auto minmax(0, 1fr); justify-items: center; align-content: start; gap: 1rem; padding: 2vh var(--gutter) 2vh; }
   .d-copy { display: grid; grid-template-areas: 'a'; justify-items: center; text-align: center; min-height: 8.6rem; }

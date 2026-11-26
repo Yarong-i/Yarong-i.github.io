@@ -23,19 +23,27 @@ export const PIECES = [
 export const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v));
 export const ease = (t: number) => (t < .5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-export const stepOf = (p: number) => (p < .34 ? 0 : p < .67 ? 1 : 2);
+// Scroll budget (p = 0..1 over the stage's effective scroll distance). Each scene has a motion part and a hold
+// part where its finished state rests before the next text comes in:
+//   모으고     motion .01-.14, hold .14-.21
+//   가공하고   motion .21-.50 (each piece crosses the line in .11, one after another), hold .50-.57
+//   자동화하고 motion .57-.68, hold .68-.75
+//   실제 화면  motion .75-.85, hold .85-1
+// On a 900px screen the stage's effective scroll is 210vh = 1890px, so a hold is about 130px or more.
+export const SCENE_START = [0, .21, .57] as const;
+export const stepOf = (p: number) => (p < SCENE_START[1] ? 0 : p < SCENE_START[2] ? 1 : 2);
 
 export type Form = 'raw' | 'block' | 'ingot' | 'coin';
 export interface PieceState { x: number; y: number; r: number; s: number; o: number; form: Form; }
 
 export function pieceAt(i: number, p: number): PieceState {
   const P = PIECES[i]!;
-  const g = ease(clamp((p - .02 - i * .02) / .16));
+  const g = ease(clamp((p - .01 - i * .011) / .03));
   const stack = { x: HOPPER.x - 32 + (i % 3) * 32, y: HOPPER.y - 14 - Math.floor(i / 3) * 22 };
   let x = lerp(P.x, stack.x, g), y = lerp(P.y, stack.y, g) - Math.sin(g * Math.PI) * 50;
   let r = lerp(P.r, 0, g), s = lerp(1.5, 1.15, g);
   let form: Form = 'raw';
-  const t = clamp((p - .34 - i * .02) / .18);
+  const t = clamp((p - .21 - i * .02) / .11);
   if (t > 0) {
     const bx = lerp(HOPPER.x - 50, SELL.x, ease(t));
     x = bx; y = BELT_Y - 22; r = 0; s = 1.05;
@@ -49,15 +57,16 @@ export function pieceAt(i: number, p: number): PieceState {
 export interface SceneState { hopper: number; line: number; lit: number[]; sell: number; links: number; reveal: number; step: number; }
 export function sceneAt(p: number): SceneState {
   return {
-    hopper: clamp(p / .15) * (1 - clamp((p - .5) / .3) * .5),
-    line: .22 + clamp((p - .3) / .08) * .78,
+    hopper: clamp(p / .06) * (1 - clamp((p - .4) / .2) * .5),
+    line: .22 + clamp((p - .17) / .04) * .78,
     lit: STATIONS.map((st) => Math.max(
       ...PIECES.map((_, i) => { const q = pieceAt(i, p); return q.y === BELT_Y - 22 ? clamp(1 - Math.abs(q.x - st.x) / 70) : 0; }),
-      clamp((p - .58) / .06) * .45)),
-    sell: clamp((p - .55) / .06),
-    links: ease(clamp((p - .69) / .14)),
-    reveal: ease(clamp((p - .84) / .14)),
+      clamp((p - .48) / .04) * .45)),
+    sell: clamp((p - .29) / .04),
+    links: ease(clamp((p - .57) / .11)),
+    reveal: ease(clamp((p - .75) / .1)),
     step: stepOf(p),
   };
 }
-export const STILL = [.3, .64, .84] as const;
+// Each scene's finished state (the stills on phones and under reduced motion).
+export const STILL = [.18, .55, .73] as const;
