@@ -76,8 +76,10 @@ endpoint가 빈 문자열이면 요청하지 않고 기존 빌드 기록 또는 
   이후 사건까지 모두 들어가므로 다음 날에도 원래 사건과 그 뒤 처리 결과가 열린다. 보관본은 지우지 않는다.
   보관본에 아직 없으면 `해당 기록 반영 대기`로 10초마다 다시 읽고, 들어오면 자동 표시한다. 읽기 실패 시 마지막 기록을 유지한다.
   Discord 알림 본문에 이 링크를 넣으려면 yatc-live 알림 코드 변경이 필요하다(이번 작업 범위 밖, 운영자 승인 필요).
-- 외부 HTTPS 저장소(예정): OCI Object Storage 공개 읽기 버킷. 서버는 `live/` 접두사 전용 쓰기 PAR URL을
-  서버의 600 파일에만 두고 `live/latest.json`, `live/days/<날짜>.json`을 PUT한다(Content-Type JSON, Cache-Control no-store).
+- 외부 HTTPS 저장소: OCI Object Storage 춘천 리전 `yarong-live` 버킷(공개 읽기, 목록 금지). 서버는 `live/` 접두사 전용 쓰기 PAR을
+  서버의 600 파일에서만 읽어 `live/latest.json`, `live/days/<날짜>.json`을 PUT한다(Content-Type JSON, Cache-Control no-store).
   상태가 바뀌면 즉시(2초 주기 확인), 아니면 장전·장중 30초, 그 외 5분마다 `updatedAt`(마지막 정상 확인)만 새로 올린다.
-  버킷이 생기면 endpoint에 `…/live/latest.json` 읽기 주소를 넣고 한 번 배포한다. 그 뒤 데이터 반영에 재빌드가 필요 없다.
-- 버킷 전에는 endpoint가 빈 문자열이며, 홈페이지는 빌드에 들어간 내구 사본을, 사건 링크는 사이트의 `/live/days/` 사본을 읽는다.
+  읽기 주소는 `src/data/live-trading-config.ts`의 endpoint. 데이터 반영에 사이트 재빌드가 필요 없다.
+- Discord: 실전 알림은 공개되는 사건(계획·접수·거절·미확인·체결·취소 확인·취소 요청 전송·장후 보고 등) 바로 뒤에 보낼 때
+  `상세: https://yarong.kr/live/?date=<날짜>&event=e<id>` 줄을 붙인다(주문 전송 ON, 시작일 이후). `test-homepage-link`는
+  주문 없는 연결 시험 알림 1건을 보내며, 그 사건(HOMEPAGE_TEST)은 시험으로만 표시되고 거래 건수·성과에 들어가지 않는다.

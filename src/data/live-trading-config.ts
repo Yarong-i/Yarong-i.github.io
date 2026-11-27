@@ -3,7 +3,7 @@
 // archives copied into the site at build (/live/days/) are used. Never put write URLs, credentials or server
 // addresses here: the browser only reads.
 export const liveTradingConfig = {
-  endpoint: '',
+  endpoint: 'https://objectstorage.ap-chuncheon-1.oraclecloud.com/n/ax4qeaolf1uw/b/yarong-live/o/live/latest.json',
   pollMs: 10_000,
   timeoutMs: 8_000,
   staleMs: 60_000,
