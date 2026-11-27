@@ -370,7 +370,7 @@ export function dayHtml(date: string, s: Snapshot | null, focus: string | null, 
   const head = `<p class="lt-dateline"><span>거래일</span> <strong>${esc(mdw(date))}</strong> ${label}${basis ? ` <small>${esc(basis)}</small>` : ''}</p>
     ${d ? heroesHtml(stockHeroes(d, op)) : ''}
     ${detail ? `<p class="lt-fine">${esc(detail)}</p>` : ''}
-    <p class="lt-links"><a href="${esc(researchLink(date))}">그날 Sonnet 추천 상세 <span aria-hidden="true">→</span></a></p>`;
+    ${date <= nav.today ? `<p class="lt-links"><a href="${esc(researchLink(date))}">그날 Sonnet 추천 상세 <span aria-hidden="true">→</span></a></p>` : ''}`;
   if (noFile) {
     const why = nav.failed ? '기록을 읽지 못했습니다 (미연동). 이전에 확인한 내용이 없어 비워 둡니다 · 10초마다 다시 확인'
       : nav.startDate && date >= nav.startDate && date >= nav.today ? '예정된 운영일입니다. 주문·체결이 기록되면 자동으로 표시합니다.'
