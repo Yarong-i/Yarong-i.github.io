@@ -21,3 +21,6 @@ src/content/performance/*.json
 deploy/
 # The public portfolio PDF is the one intentional exception (docs/operations.md).
 !public/files/yarong-portfolio.pdf
+
+# Public live-trading snapshot (exported separately)
+/data/live-trading.json

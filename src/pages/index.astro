@@ -7,6 +7,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import FactoryGraphic from '../components/home/FactoryGraphic.astro';
 import PerformanceChart from '../components/home/PerformanceChart.astro';
 import ResearchToday from '../components/ResearchToday.astro';
+import LiveTrading from '../components/LiveTrading.astro';
 import { STILL } from '../components/home/factoryModel';
 import { getPerformance, getResearchDays } from '../utils/research';
 import { getFeed, FEED_LABEL, formatFeedDate } from '../utils/news';
@@ -88,6 +89,8 @@ const makes = [
       <PerformanceChart days={researchDays} performance={performance} />
     </div>
   </section>
+
+  <div class="shell"><LiveTrading /></div>
 
   {/* ③ 폐품 공장 */}
   <section id="jf" class="d-jf-head shell" aria-labelledby="d-jf-h">

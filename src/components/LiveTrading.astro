@@ -1,0 +1,66 @@
+---
+import { labels, formatTime, amount, signed } from '../utils/live-trading';
+import { getLiveTrading } from '../utils/live-trading-loader';
+import { liveTradingConfig } from '../data/live-trading-config';
+const { snapshot, error } = await getLiveTrading();
+const operators = snapshot?.operators ?? [];
+const records = [...(snapshot?.records ?? [])].sort((a,b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
+const active = records.filter(r => !['closed','unfilled','rejected','cancelled','failed'].includes(r.status));
+const history = records.flatMap(r => r.events.map((e, index) => ({...e, model:r.model, name:r.name, symbol:r.symbol, index}))).sort((a,b) => Date.parse(b.at)-Date.parse(a.at));
+const tone = (status: string) => /failed|rejected|stop_loss/.test(status) ? 'alert' : /submitted|partial/.test(status) ? 'order' : /waiting/.test(status) ? 'waiting' : 'neutral';
+---
+<section class="live-trading" id="live-trading" data-endpoint={liveTradingConfig.endpoint} data-snapshot-time={snapshot?.updatedAt} aria-labelledby="live-title">
+  <header><div><p class="eyebrow">REAL TRADING / 실제 매매 기록</p><h2 id="live-title">실전 운용</h2></div><span class="connection">{snapshot ? '기록 연동' : error ? '기록 확인 불가' : '연동 대기'}</span></header>
+  <p class="intro">어떤 모델이 운용하고, 얼마를 벌었고, 지금 무엇을 기다리는지.</p>
+  <p class="muted">{snapshot ? `마지막 동기화 기록 ${formatTime(snapshot.updatedAt)} KST · 아래 상태는 마지막 확인 시점 기준입니다.` : '실제 기록 연결 전입니다. 운영 모델·성과·현재 상태는 아직 확인되지 않았습니다.'}</p>
+  <div class="overview">
+    <div><span>운영 모델</span><strong>{operators.length ? operators.map(o=>o.model).join(' / ') : '미확인'}</strong></div>
+    <div><span>진행 중 기록</span><strong>{snapshot ? `${active.length}건` : '미확인'}</strong></div>
+    <div><span>기록 갱신 방식</span><strong>게시 시점 기준</strong><small>실시간 시세·주문 화면이 아닙니다</small></div>
+  </div>
+  <div class="performance">
+    {(operators.length ? operators : [null]).map(o => <article class="performance-card">
+      <div class="row"><h3>{o?.model ?? '실전 성적'}</h3><span class="muted">{o ? `${o.since} ~ ${o.through}` : '집계 전'}</span></div>
+      <div class="return">{signed(o?.returnPct ?? null,'%')}<span>누적 수익률</span></div>
+      <dl class="metrics">
+        <div><dt>실현 손익</dt><dd>{signed(o?.realizedPnl ?? null,'원')}</dd></div>
+        <div><dt>평가 손익</dt><dd>{signed(o?.unrealizedPnl ?? null,'원')}</dd></div>
+        <div><dt>청산 거래</dt><dd>{o ? amount(o.closedTrades,'건') : '집계 전'}</dd></div>
+        <div><dt>수익 거래</dt><dd>{o ? amount(o.winningTrades,'건') : '집계 전'}</dd></div>
+      </dl>
+      <p class="muted">{o ? `${o.costBasis === 'net' ? '비용 반영 후' : o.costBasis === 'gross' ? '비용 반영 전' : '비용 반영 여부 미확인'} · 수익률 기준: ${o.returnMethod ?? '미확인'}` : '확인된 실거래 성과만 표시합니다.'}</p>
+      {o && <time datetime={o.updatedAt}>{formatTime(o.updatedAt)} KST 확인</time>}
+    </article>)}
+  </div>
+  <div class="body-grid">
+    <section aria-labelledby="position-title"><h3 id="position-title">현재 운용 상태</h3>
+      {!records.length && <div class="empty"><strong>{error ? '기록 확인 불가' : snapshot ? '공개된 거래 기록 없음' : '상태 확인 대기'}</strong><p>매수 대기·보유·청산 여부를 확인할 실제 기록이 필요합니다.</p></div>}
+      {records.map(r => <article class="position" data-tone={tone(r.status)}>
+        <div class="row"><h4>{r.name} <small>{r.symbol}</small></h4><span class="badge">{labels[r.status]}</span></div>
+        <p class="muted">운용 모델 {r.model}</p>
+        <div class="state"><span>마지막 확인 상태</span><strong>{labels[r.status]}</strong><time datetime={r.updatedAt}>{formatTime(r.updatedAt)} KST 확인</time>{r.statusSince && <small>{formatTime(r.statusSince)}부터</small>}</div>
+        <dl class="metrics">
+          <div><dt>매수 체결 금액</dt><dd>{amount(r.filledAmount,'원')}</dd></div><div><dt>체결 / 주문 수량</dt><dd>{amount(r.filledQuantity,'주')} / {amount(r.requestedQuantity,'주')}</dd></div>
+          <div><dt>보유 수량</dt><dd>{amount(r.heldQuantity,'주')}</dd></div><div><dt>평균 매수가</dt><dd>{amount(r.averagePrice,'원')}</dd></div>
+          <div><dt>익절 기준가</dt><dd>{amount(r.takeProfitPrice,'원')}</dd></div><div><dt>손절 기준가</dt><dd>{amount(r.stopLossPrice,'원')}</dd></div>
+        </dl>
+        <p class="muted">조건 대기는 주문 접수가 아닙니다. 주문 접수 후에도 체결 확인 전에는 매매 완료로 표시하지 않습니다.</p>
+      </article>)}
+    </section>
+    <section class="timeline-panel" aria-labelledby="timeline-title"><div class="row"><h3 id="timeline-title">운용 타임라인</h3><span class="muted">최근 기록부터 · KST</span></div>
+      {!history.length && <div class="empty"><strong>아직 공개된 이벤트가 없습니다</strong><p>매수 시도, 주문 접수, 체결, 청산까지 실제 발생 시각과 함께 표시합니다.</p></div>}
+      <ol class="timeline">{history.map(e => <li data-tone={tone(e.status ?? '')}>
+        <time datetime={e.at}>{formatTime(e.at)}</time>
+        {e.status && <strong class="event-status">{labels[e.status]}</strong>}
+        <h4>{e.name} <small>{e.symbol} · {e.model}</small></h4><p>{e.text}</p>
+      </li>)}</ol>
+    </section>
+  </div>
+</section>
+<script>
+  import { connectLiveTrading } from '../utils/live-trading-client';
+  connectLiveTrading();
+</script>
+<style>
+.live-trading{margin:3rem 0;padding:clamp(1.1rem,3vw,2.5rem);border:1px solid var(--line);border-top:3px solid #e7eef9;background:#0c0f14;min-width:0}header,.row{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap}.eyebrow{letter-spacing:.12em;font-size:.875rem;color:#adbcd1;margin:0 0 .7rem}h2{font-size:clamp(2rem,4vw,3.5rem);letter-spacing:-.06em;margin:0}h3{font-size:1.1rem;margin:0}h4{font-size:1rem;margin:0}.intro{font-size:1.1rem;line-height:1.8}.connection,.badge{font-size:.875rem;border:1px solid var(--line);padding:.4rem .75rem}.connection:before{content:'';display:inline-block;width:6px;height:6px;background:#a6b2c3;margin-right:.5rem}.muted,dt,small,time{color:#a5afbe;font-size:.875rem;line-height:1.7}.overview{display:grid;grid-template-columns:2fr 1fr 1fr;border-block:1px solid var(--line);margin:1.5rem 0}.overview>div{padding:1.2rem;min-width:0}.overview span,.overview strong,.overview small{display:block}.overview span{color:#a5afbe;font-size:.875rem}.overview strong{font-size:1.1rem;margin-top:.5rem;overflow-wrap:anywhere}.performance{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:1rem}.performance-card{padding:1.5rem;background:#131923;border:1px solid #283343}.return{font-size:clamp(2rem,4vw,3rem);font-weight:700;letter-spacing:-.05em;padding:1.2rem 0}.return span{display:block;letter-spacing:0;font-size:.875rem;font-weight:400;color:#a5afbe}.metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1.2rem;margin:1rem 0}dd{margin:.3rem 0 0;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}.body-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:2rem;margin-top:2rem}.position{border:1px solid var(--line);padding:1.2rem;margin-top:1rem;--signal:#bdc9dc}.position[data-tone=waiting],li[data-tone=waiting]{--signal:#eed093}.position[data-tone=order],li[data-tone=order]{--signal:#8dc4ff}.position[data-tone=alert],li[data-tone=alert]{--signal:#f0a5a5}.badge,.event-status{color:var(--signal)}.state{border-left:3px solid var(--signal);padding:.8rem 1rem;background:#141922}.state>*{display:block}.state span{font-size:.875rem;color:#a5afbe}.state strong{font-size:1.4rem;margin:.4rem 0}.timeline{list-style:none;padding:0;margin:1.5rem 0}.timeline li{position:relative;border-left:1px solid #344052;margin-left:.3rem;padding:0 0 1.7rem 1.5rem;--signal:#bdc9dc}.timeline li:before{content:'';position:absolute;left:-5px;top:7px;width:9px;height:9px;background:var(--signal);border-radius:50%}.timeline time,.event-status{display:block}.event-status{margin:.4rem 0}.timeline h4{margin-top:.4rem}.timeline small{display:block}.timeline p{margin:.5rem 0;line-height:1.7;white-space:pre-wrap}.empty{padding:2rem 0;color:#a5afbe;line-height:1.8}.empty strong{color:#e3e8ef}p,h4{overflow-wrap:anywhere}@media(max-width:760px){.body-grid{grid-template-columns:1fr}.overview{grid-template-columns:1fr}.overview>div{padding:1rem 0;border-bottom:1px solid var(--line)}.live-trading{margin-top:2rem}.metrics{gap:1rem .6rem}}@media(prefers-reduced-motion:no-preference){.position{transition:border-color .2s}.position:hover{border-color:#718096}}
+</style>
