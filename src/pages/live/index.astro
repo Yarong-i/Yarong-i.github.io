@@ -1,39 +1,52 @@
 ---
-// /live/                      date list (compare days)
-// /live/?date=YYYY-MM-DD      one day as of that day: orders, fills, cancels, close sell, carry, P&L, KST timeline
-// /live/?date=…&event=<id>    the same day with that event highlighted (the form Discord alerts link to)
-// Static page; the browser reads the public bucket (then the site's build copy) every 10 s.
+// 실전 운용, read like 주식 연구: /live/ = title, recent day table + method, 날짜별 기록 (date -> model rows).
+// /live/?date=YYYY-MM-DD[#m-model] = the date/model detail (recommendation + live action + history), and
+// &event=<id> (Discord alerts) highlights that event. Static page: the browser reads the public live archive every
+// 10 s; the research record of each day's operating model is embedded at build.
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import '../../styles/live-trading.css';
+import '../../styles/live-page.css';
+import { liveResearchDays } from '../../utils/live-research';
+const research = await liveResearchDays();
 ---
-<BaseLayout title="날짜별 실전 기록 — YARONG" description="실전 운용의 날짜별 결과와 하루 주문·체결 기록">
-  <section class="lt-page shell" id="live-page" aria-labelledby="lt-page-title">
-    <div class="lt-side">
-      <p class="lt-crumb"><a href="/#live-trading">← 실전 운용</a></p>
-      <h1 id="lt-page-title" data-page-title>날짜별 실전 기록</h1>
-      <p class="lt-conn"><span class="connection" role="status" data-page-state>불러오는 중</span></p>
-      <p class="lt-checked" data-page-checked></p>
+<BaseLayout title="실전 운용 — YARONG" description="운영 모델의 장전 추천과 실제 주문·체결·청산 기록을 날짜별로 봅니다.">
+  <div class="page shell live-page" id="live-page">
+    <div data-mode-index>
+      <p class="eyebrow">Live trading</p>
+      <h1 class="page-title">실전 운용</h1>
+      <div class="top">
+        <section class="lt-body" aria-label="가장 최근 실전 거래일" data-live-top><p class="lt-empty">실전 기록 확인 중</p></section>
+        <div class="howto">
+          <h2>추천과 실제 매매를 함께 봅니다</h2>
+          <ol>
+            <li><b>장전</b> 운영 모델의 최종 1순위 추천으로 매매합니다. 추천 종목·점수·선정 이유는 주식 연구 기록과 같습니다.</li>
+            <li><b>매수</b> 개장 5분 전 시가 단일가 지정가 주문을 냅니다. 접수와 체결은 따로 기록하고, 남은 수량은 개장 5분 뒤 취소합니다.</li>
+            <li><b>보유</b> −1.5%·+3%는 관찰만 하며 익절·손절 주문을 내지 않습니다.</li>
+            <li><b>청산</b> 마감 5분 전 종가 단일가로 매도합니다. 팔리지 않은 수량은 다음 거래일로 이월합니다.</li>
+          </ol>
+          <p class="note">성과는 실제 체결 기준 실현손익이며 수수료·제세금 차감 전입니다. 주식 연구의 모의 성과가 아닙니다. 기록이 없는 값은 0으로 채우지 않습니다.</p>
+          <p class="lp-state-line"><span class="connection" data-page-state role="status">불러오는 중</span></p>
+          <p class="lt-checked" data-page-checked></p>
+        </div>
+      </div>
+      <section id="records" class="block" aria-labelledby="records-h">
+        <div class="section-head"><h2 id="records-h">날짜별 기록</h2><span class="meta" data-records-count></span></div>
+        <div class="lt-body" data-live-records><p class="lt-empty">날짜별 기록 확인 중</p></div>
+      </section>
     </div>
-    <div class="lt-body" data-page-body>
-      <noscript><p class="lt-empty">이 기록은 브라우저에서 불러옵니다. JavaScript를 켜 주세요.</p></noscript>
-    </div>
-  </section>
+    <article data-mode-day hidden>
+      <a class="arrow-link back" href="/live/#records">날짜별 기록</a>
+      <p class="eyebrow">실전 운용 거래일</p>
+      <h1 class="page-title" data-day-title></h1>
+      <p class="lp-state-line"><span class="connection" data-day-state role="status"></span> <span class="lt-checked" data-day-checked></span></p>
+      <div class="lt-body" data-live-day></div>
+      <p class="hint">개인 기록이며 투자 권유가 아닙니다.</p>
+    </article>
+    <noscript><p class="lt-empty">실전 기록은 브라우저에서 불러옵니다. JavaScript를 켜 주세요.</p></noscript>
+  </div>
+  <script is:inline type="application/json" data-live-research set:html={JSON.stringify(research).replace(/</g, '\\u003c')} />
 </BaseLayout>
 <script>
   import { connectLivePage } from '../../utils/live-page-client';
   connectLivePage();
 </script>
-<style>
-  .lt-page { display: grid; grid-template-columns: minmax(16rem, 1fr) minmax(0, 40rem); gap: 1.6rem clamp(2rem, 4vw, 3.5rem); align-items: start; padding-block: clamp(2rem, 5vw, 3.5rem) clamp(3rem, 7vw, 5rem); }
-  .lt-side { display: grid; gap: .4rem; justify-items: start; padding-top: 1rem; border-top: 2px solid var(--text); }
-  .lt-side h1 { margin: 0; font: 800 clamp(1.8rem, 2.8vw, 2.4rem)/1.1 var(--display); letter-spacing: -.04em; }
-  .lt-side p { margin: 0; color: var(--muted); font: 500 .98rem/1.55 var(--body); }
-  .lt-crumb a { color: var(--muted); font: 600 .85rem var(--body); text-decoration: none; }
-  .lt-crumb a:hover, .lt-crumb a:focus-visible { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
-  .lt-side .lt-checked { color: var(--faint); font-size: .78rem; }
-  .lt-body { display: grid; gap: 1.4rem; padding-top: .9rem; border-top: 2px solid var(--text); min-width: 0; }
-  @media (max-width: 1100px) {
-    .lt-page { grid-template-columns: minmax(0, 1fr); }
-    .lt-side { padding-top: 0; border-top: 0; }
-  }
-</style>

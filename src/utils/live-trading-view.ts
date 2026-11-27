@@ -18,28 +18,28 @@ const DASH = '—';
 const SCHEDULE = { pick: -10, prep: -9, buy: -5, sell: -5, report: 20 };
 
 export const esc = (v: unknown) => String(v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
-const time = (iso: string, suffix = '') => `<time datetime="${esc(iso)}">${esc(formatTime(iso))}${suffix}</time>`;
-const tagText = (text: string, live = false) => `<span class="lt-tag${live ? ' lt-tag-live' : ''}">${esc(text)}</span>`;
-const tag = (s: Status) => tagText(labels[s], LIVE_ORDER.test(s));
+export const time = (iso: string, suffix = '') => `<time datetime="${esc(iso)}">${esc(formatTime(iso))}${suffix}</time>`;
+export const tagText = (text: string, live = false) => `<span class="lt-tag${live ? ' lt-tag-live' : ''}">${esc(text)}</span>`;
+export const tag = (s: Status) => tagText(labels[s], LIVE_ORDER.test(s));
 const block = (title: string, body: string, note = '') =>
   `<section class="lt-block"><h3 class="lt-label">${title}</h3>${body}${note ? `<p class="lt-fine">${note}</p>` : ''}</section>`;
-const empty = (text: string) => `<p class="lt-empty">${esc(text)}</p>`;
+export const empty = (text: string) => `<p class="lt-empty">${esc(text)}</p>`;
 
-const won = (v: number | null | undefined) => (v === null || v === undefined ? DASH : `${Math.round(v).toLocaleString('ko-KR')}원`);
-const shares = (v: number | null | undefined) => (v === null || v === undefined ? DASH : `${v.toLocaleString('ko-KR')}주`);
+export const won = (v: number | null | undefined) => (v === null || v === undefined ? DASH : `${Math.round(v).toLocaleString('ko-KR')}원`);
+export const shares = (v: number | null | undefined) => (v === null || v === undefined ? DASH : `${v.toLocaleString('ko-KR')}주`);
 /** Signed money: red gain, blue loss, neutral 0 / unknown. `known` false = no record yet -> '—'. */
-const pnlHtml = (v: number | null | undefined, known = true) => {
+export const pnlHtml = (v: number | null | undefined, known = true) => {
   if (!known || v === null || v === undefined) return `<span class="lt-flat">${DASH}</span>`;
   const r = Math.round(v);
   return `<span class="${r > 0 ? 'lt-up' : r < 0 ? 'lt-down' : 'lt-flat'}">${r > 0 ? '+' : ''}${esc(r.toLocaleString('ko-KR'))}원</span>`;
 };
-const pctHtml = (v: number | null | undefined) => (v === null || v === undefined ? `<span class="lt-flat">${DASH}</span>`
+export const pctHtml = (v: number | null | undefined) => (v === null || v === undefined ? `<span class="lt-flat">${DASH}</span>`
   : `<span class="${v > 0 ? 'lt-up' : v < 0 ? 'lt-down' : 'lt-flat'}">${v > 0 ? '+' : ''}${esc(v.toFixed(2))}%</span>`);
-const kstDay = (ms: number) => new Date(ms + 9 * 3600e3).toISOString().slice(0, 10);
-const kstClock = (iso: string, len = 8) => new Date(Date.parse(iso) + 9 * 3600e3).toISOString().slice(11, 11 + len);
+export const kstDay = (ms: number) => new Date(ms + 9 * 3600e3).toISOString().slice(0, 10);
+export const kstClock = (iso: string, len = 8) => new Date(Date.parse(iso) + 9 * 3600e3).toISOString().slice(11, 11 + len);
 export const md = (d: string) => `${+d.slice(5, 7)}/${+d.slice(8, 10)}`;
 const dow = (d: string) => '일월화수목금토'[new Date(`${d}T00:00:00Z`).getUTCDay()];
-const mdw = (d: string) => `${md(d)} (${dow(d)})`;
+export const mdw = (d: string) => `${md(d)} (${dow(d)})`;
 function hm(iso: string, now: number) {
   const ms = Date.parse(iso), day = kstDay(ms), clock = new Date(ms + 9 * 3600e3).toISOString().slice(11, 16);
   return day === kstDay(now) ? clock : `${md(day)} ${clock}`;
@@ -53,14 +53,14 @@ const times = (op?: Op | null) => {
   const open = op?.sessionOpen ?? '09:00', close = op?.sessionClose ?? '15:30';
   return { open, close, pick: shift(open, SCHEDULE.pick), prep: shift(open, SCHEDULE.prep), buy: shift(open, SCHEDULE.buy), sell: shift(close, SCHEDULE.sell), report: shift(close, SCHEDULE.report) };
 };
-const isLive = (d: Day | null, op?: Op | null) => !!d && !!op && d.date === op.tradingDate && (op.phase === 'pre_open' || op.phase === 'in_session');
+export const isLive = (d: Day | null, op?: Op | null) => !!d && !!op && d.date === op.tradingDate && (op.phase === 'pre_open' || op.phase === 'in_session');
 const isCandidate = (t: Trade) => !t.carry;
-const sold = (t?: Trade) => !!t && t.sellQty > 0;
+export const sold = (t?: Trade) => !!t && t.sellQty > 0;
 
 /** Display group of a day's result: 거래 없음 / 실행 실패 are groups, the detail goes in the reason line. */
 export const resultLabel = (r: keyof typeof dayResults) => (r === 'no_pick' || r === 'not_attempted' ? '거래 없음' : r === 'pick_failed' ? '실행 실패' : dayResults[r]);
-const resultTag = (r: keyof typeof dayResults) => tagText(resultLabel(r), LIVE_ORDER.test(r));
-const resultDetail = (r: keyof typeof dayResults, reason: string | null) =>
+export const resultTag = (r: keyof typeof dayResults) => tagText(resultLabel(r), LIVE_ORDER.test(r));
+export const resultDetail = (r: keyof typeof dayResults, reason: string | null) =>
   r === 'no_pick' ? (reason && reason !== '추천 없음' ? `추천 없음 · ${reason}` : '추천 없음') : r === 'pick_failed' ? `추천 생성 실패${reason && reason !== '추천 실패' ? ` · ${reason}` : ''}` : reason;
 
 /** Stable links. Discord alerts use dayLink(date, event). */
@@ -95,7 +95,7 @@ type StepState = 'done' | 'current' | 'failed' | 'todo';
 type Flow = { steps: { label: string; state: StepState; note: string }[]; live: boolean };
 const STEPS = ['추천 대기', '매수 주문', '체결·보유', '청산'];
 
-function flowOf(d: Day | null, op: Op | null | undefined, t: Trade | undefined, carry = false): Flow {
+export function flowOf(d: Day | null, op: Op | null | undefined, t: Trade | undefined, carry = false): Flow {
   const live = d ? isLive(d, op) : false;
   const mk = (at: number, state: 'current' | 'failed' | 'done', note: string, notes: string[] = []) => ({
     live, steps: STEPS.map((label, i) => ({ label, state: (i < at ? 'done' : i === at ? state : 'todo') as StepState, note: i === at ? note : notes[i] ?? '' })),
@@ -129,7 +129,7 @@ function flowOf(d: Day | null, op: Op | null | undefined, t: Trade | undefined, 
   return mk(3, 'current', t.sellQty ? `일부 매도 ${t.sellQty}/${t.sellOrderQty}주` : '매도 주문 접수 · 체결 전', m);
 }
 
-function flowHtml(f: Flow) {
+export function flowHtml(f: Flow) {
   // A finished day's flow is a record, not a live state: no step is highlighted as "now".
   return `<ol class="lt-flow${f.live ? ' is-live' : ' is-record'}" aria-label="거래 진행 단계">${f.steps.map((s) =>
     `<li class="is-${s.state}"${s.state === 'current' && f.live ? ' aria-current="step"' : ''}><span class="lt-flow-dot" aria-hidden="true"></span><b>${esc(s.label)}</b>${s.note ? `<small>${esc(s.note)}</small>` : ''}${s.state === 'failed' ? '<span class="sr-only"> (중단)</span>' : ''}</li>`).join('')}</ol>`;
@@ -200,14 +200,14 @@ const heroesHtml = (hs: Hero[]) => `<div class="lt-heroes">${hs.map((h, k) => he
 // ---------------------------------------------------------------- events (timeline)
 type Ev = { id: string | null; at: string; status?: Status; who: string; text: string };
 const isObservation = (e: Ev) => !!e.id && e.id.startsWith('o');
-function eventsOf(s: Snapshot | null, date?: string): Ev[] {
+export function eventsOf(s: Snapshot | null, date?: string): Ev[] {
   const inDay = (at: string) => !date || kstDay(Date.parse(at)) === date;
   return [...(s?.records ?? []).flatMap((r) => r.events.filter((e) => inDay(e.at)).map((e) => ({ id: e.id ?? null, at: e.at, status: e.status, who: `${r.name} ${r.symbol}`, text: e.text }))),
     ...(s?.dayEvents ?? []).filter((e) => (!date || e.date === date) && (date || !e.test)).map((e) => ({ id: e.id, at: e.at, status: undefined, who: e.test ? '연결 시험' : '운영', text: e.text }))]
     .sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
 }
 /** Dots on a line. data-ev lets the page mark an event as new only when it appears after the first load. */
-function timelineHtml(evs: Ev[], opts: { focus?: string | null; linkDate?: string; clockLen?: number } = {}) {
+export function timelineHtml(evs: Ev[], opts: { focus?: string | null; linkDate?: string; clockLen?: number } = {}) {
   return `<ol class="lt-timeline">${evs.map((e) => {
     const focus = !!e.id && e.id === opts.focus;
     const clock = opts.clockLen ? `${md(kstDay(Date.parse(e.at)))} ${kstClock(e.at, opts.clockLen)}` : kstClock(e.at);
@@ -337,7 +337,7 @@ function sellText(t: Trade) {
   const c = t.sellCancelState === 'confirmed' ? ` · 잔량 ${shares(t.sellCancelledQty)} 취소 확인` : t.sellCancelState === 'requested' ? ' · 잔량 취소 요청 중' : '';
   return `${shares(t.sellQty)} / 주문 ${shares(t.sellOrderQty)} · 평균 ${won(t.avgSellPrice)} · ${won(t.sellAmount)}${c}`;
 }
-function tradeHtml(t: Trade) {
+export function tradeHtml(t: Trade) {
   return `<section class="lt-trade"><h4>${esc(t.name ?? t.symbol)} <small>${esc(t.symbol)}${t.carry ? ' · 이월 보유 · 매도 우선' : ''}</small>${t.orderState && t.orderState in labels ? ` ${tag(t.orderState as Status)}` : ''}</h4>
     <dl class="lt-kv">
       ${t.carry ? `<div><dt>전일 이월</dt><dd>${esc(shares(t.heldBefore ?? null))}</dd></div>` : `<div><dt>주문 수량</dt><dd>${esc(shares(t.orderQty))}</dd></div>

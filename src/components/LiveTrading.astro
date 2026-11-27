@@ -21,7 +21,7 @@ const embedded = snapshot ? JSON.stringify(snapshot) : undefined;
     <p class="lt-checked" data-live-checked>{liveChecked(snapshot)}</p>
   </div>
   <div class="lt-body lt-summary" data-live-body set:html={homeBodyHtml(snapshot, error)} />
-  {embedded && <script type="application/json" data-live-embedded set:html={embedded.replace(/</g, '\\u003c')} />}
+  {embedded && <script is:inline type="application/json" data-live-embedded set:html={embedded.replace(/</g, '\\u003c')} />}
 </section>
 <script>
   import { connectLiveTrading } from '../utils/live-trading-client';
