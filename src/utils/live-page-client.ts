@@ -4,6 +4,7 @@
 import { snapshotSchema, indexSchema, formatTime } from './live-trading';
 import { indexHtml, dayHtml, md } from './live-trading-view';
 import { liveTradingConfig as config, archiveUrls, indexUrls } from '../data/live-trading-config';
+import { newEventMarker } from './live-new-events';
 import type { z } from 'astro/zod';
 
 /** First source that has it; null = every reachable source says "not there yet"; throws = none could be read. */
@@ -39,12 +40,14 @@ export function connectLivePage() {
   let index: z.infer<typeof indexSchema> | null = null;
   let day: z.infer<typeof snapshotSchema> | null = null;
   let shownAt = '', painted = '', scrolled = false, timer: ReturnType<typeof setTimeout>, busy = false;
+  const markNew = newEventMarker();
+  const today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
   if (date) { title.textContent = `${md(date)} 실전 상세`; document.title = `${date} 실전 기록 — YARONG`; }
 
   async function poll() {
     if (busy || document.hidden) return;
     busy = true; clearTimeout(timer);
-    let failed = false;
+    let failed = false, dayFailed = false;
     try {
       try {
         const ix = await readFirst(indexUrls(), (v) => indexSchema.parse(v));
@@ -54,19 +57,20 @@ export function connectLivePage() {
         try {
           const s = await readFirst(archiveUrls(date), (v) => snapshotSchema.parse(v));
           if (s && (!day || Date.parse(s.updatedAt) >= Date.parse(day.updatedAt))) day = s;
-        } catch { failed = true; }
+        } catch { failed = true; dayFailed = true; }
       }
       const days = index?.days.map((d) => d.date).sort() ?? [];
-      const nav = date ? { prev: [...days].reverse().find((d) => d < date), next: days.find((d) => d > date) } : {};
-      const html = date ? dayHtml(date, day, event, nav) : indexHtml(index, failed);
-      if (html !== painted) { body.innerHTML = html; painted = html; }
+      const nav = { prev: date ? [...days].reverse().find((d) => d < date) : undefined, next: date ? days.find((d) => d > date) : undefined,
+        startDate: index?.startDate ?? null, today, failed: dayFailed && !day };
+      const html = date ? dayHtml(date, day, event, nav) : indexHtml(index, failed, today);
+      if (html !== painted) { body.innerHTML = html; painted = html; if (date ? day : index) markNew(body); }
       const found = !event || !!body.querySelector('.lt-focus');
       if (event && found && !scrolled) { body.querySelector('.lt-focus')?.scrollIntoView({ block: 'center' }); scrolled = true; }
       const src = date ? day : index;
       if (src) shownAt = src.updatedAt;
-      state.textContent = failed ? (shownAt ? `연결 실패 · ${formatTime(shownAt)} 기록 유지` : '연결 실패 · 다시 시도 중')
+      state.textContent = failed ? (shownAt ? `연결 실패 · ${formatTime(shownAt)} 기록 유지` : '미연동 · 연결 실패 · 다시 시도 중')
         : event && !found ? '해당 기록 반영 대기 · 10초마다 다시 확인'
-        : date && !day ? '이 날짜 기록 없음 · 10초마다 다시 확인'
+        : date && !day ? (index?.startDate && date >= index.startDate && date >= today ? '예정일 · 10초마다 다시 확인' : '이 날짜 기록 없음 · 10초마다 다시 확인')
         : '자동 갱신 중';
       checked.textContent = shownAt ? `${date ? '보관본 반영' : '목록 갱신'} ${formatTime(shownAt)} · 수신 ${formatTime(new Date().toISOString())} · KST` : '';
     } finally { busy = false; if (!document.hidden) timer = setTimeout(poll, config.pollMs); }

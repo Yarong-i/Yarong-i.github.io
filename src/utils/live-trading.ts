@@ -64,7 +64,8 @@ export const operatorSchema = z.object({
 export const indexSchema = z.object({
   version: z.literal(1), updatedAt: z.iso.datetime({ offset: true }), model: z.string(), startDate: z.iso.date().nullable(),
   operators: z.array(operatorSchema).optional(),
-  days: z.array(daySummary.pick({ date: true, result: true, reason: true, symbol: true, name: true, stocks: true, buyAmount: true, realizedPnl: true, heldAfter: true, costConfirmed: true })),
+  days: z.array(daySummary.pick({ date: true, result: true, reason: true, symbol: true, name: true, stocks: true, buyAmount: true, realizedPnl: true, heldAfter: true, costConfirmed: true })
+    .extend({ model: z.string().optional(), sellAmount: number.optional() })),
 });
 export const snapshotSchema = z.object({
   version: z.literal(1), updatedAt: z.iso.datetime({ offset: true }), records: z.array(record),

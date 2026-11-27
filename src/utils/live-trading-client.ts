@@ -3,6 +3,7 @@
 import { snapshotSchema } from './live-trading';
 import { homeSideHtml, homeBodyHtml, liveStatus, liveChecked } from './live-trading-view';
 import { liveTradingConfig as config } from '../data/live-trading-config';
+import { newEventMarker } from './live-new-events';
 import type { z } from 'astro/zod';
 type Snapshot = z.infer<typeof snapshotSchema>;
 
@@ -20,6 +21,8 @@ export function connectLiveTrading() {
     current = raw ? snapshotSchema.parse(JSON.parse(raw)) : null;
   } catch { current = null; }
   let failed = false;
+  // The first successful read primes it (everything loaded on opening the page counts as already seen).
+  const markNew = newEventMarker();
   const paintSide = () => {
     if (errored && !current) return;
     side.innerHTML = homeSideHtml(current, liveStatus(current, Date.now(), config.staleMs, failed));
@@ -49,7 +52,7 @@ export function connectLiveTrading() {
       const snapshot = snapshotSchema.parse(await response.json()); const stamp = Date.parse(snapshot.updatedAt);
       if (stamp < lastTime || stamp > Date.now() + 60_000) throw new Error('Invalid timestamp');
       const payload = JSON.stringify({ ...snapshot, updatedAt: '', brokerCheckedAt: '' });
-      if (payload !== lastPayload) { body.innerHTML = homeBodyHtml(snapshot, false); lastPayload = payload; }
+      if (payload !== lastPayload) { body.innerHTML = homeBodyHtml(snapshot, false); lastPayload = payload; markNew(body); }
       lastTime = stamp; failed = false; current = snapshot;
       checked.textContent = liveChecked(snapshot, new Date().toISOString());
     } catch { failed = true; } finally { clearTimeout(timeout); busy = false; paintSide(); if (!document.hidden) timer = setTimeout(poll, config.pollMs); }

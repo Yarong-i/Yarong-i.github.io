@@ -1,7 +1,7 @@
 ---
 const path = Astro.url.pathname;
 // 오늘의 추천: an anchor to today's picks on Home (from every page).
-const links: ReadonlyArray<readonly [string, string]> = [['/#today', '오늘의 추천'], ['/projects', '프로젝트'], ['/research', '주식 연구'], ['/play', '미니게임'], ['/contact', '문의']];
+const links: ReadonlyArray<readonly [string, string]> = [['/#today', '오늘의 추천'], ['/projects', '프로젝트'], ['/research', '주식 연구'], ['/live', '실전 운용'], ['/play', '미니게임'], ['/contact', '문의']];
 const isCurrent = (href: string) => path === href || path.startsWith(`${href}/`);
 ---
 <header class="header" data-header>
@@ -39,7 +39,7 @@ const isCurrent = (href: string) => path === href || path.startsWith(`${href}/`)
   document.addEventListener('click', (event) => {
     if (isOpen() && header && !header.contains(event.target as Node)) setOpen(false);
   });
-  window.matchMedia('(min-width: 761px)').addEventListener('change', (event) => { if (event.matches) setOpen(false); });
+  window.matchMedia('(min-width: 901px)').addEventListener('change', (event) => { if (event.matches) setOpen(false); });
   let ticking = false;
   const updateScrolled = () => { ticking = false; header?.classList.toggle('is-scrolled', window.scrollY > 4); };
   window.addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(updateScrolled); } }, { passive: true });
@@ -51,7 +51,9 @@ const isCurrent = (href: string) => path === href || path.startsWith(`${href}/`)
   .inner { display: flex; align-items: center; gap: clamp(1rem, 3vw, 2.5rem); min-height: 3.75rem; }
   .logo { flex: 0 0 auto; display: inline-flex; align-items: center; min-height: 2.75rem; font: 800 1rem var(--display); letter-spacing: .12em; }
   .site-nav ul { display: flex; gap: .25rem; margin: 0; padding: 0; list-style: none; }
-  .site-nav a { display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0 .85rem; border-radius: 999px; color: var(--muted); font: 600 .92rem var(--body); transition: color var(--fast), background-color var(--fast); }
+  .site-nav a { display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0 .85rem; border-radius: 999px; color: var(--muted); font: 600 .92rem var(--body); white-space: nowrap; transition: color var(--fast), background-color var(--fast); }
+  /* six links + 포트폴리오: tighter between 901 and 1100 px so every label stays on one line */
+  @media (max-width: 1100px) { .inner { gap: 1rem; } .site-nav ul { gap: 0; } .site-nav a { padding: 0 .6rem; font-size: .88rem; } }
   .site-nav a:hover, .site-nav a:focus-visible { color: var(--text); background: rgba(var(--light), .07); }
   .site-nav a[aria-current='page'] { color: var(--text); background: rgba(var(--light), .1); }
   .end { display: flex; align-items: center; gap: .5rem; margin-left: auto; }
@@ -60,7 +62,7 @@ const isCurrent = (href: string) => path === href || path.startsWith(`${href}/`)
   .portfolio:active { transform: scale(.96); }
   .menu-button { display: none; }
 
-  @media (max-width: 760px) {
+  @media (max-width: 900px) {
     :global(.js) .menu-button { display: inline-grid; place-items: center; width: 2.75rem; height: 2.75rem; border: 1px solid var(--line-strong); border-radius: 999px; background: transparent; cursor: pointer; }
     .menu-icon { position: relative; width: 1rem; height: .6rem; }
     .menu-icon::before, .menu-icon::after { content: ''; position: absolute; left: 0; right: 0; height: 1.5px; background: currentColor; transition: transform var(--base) var(--ease), top var(--base) var(--ease); }
