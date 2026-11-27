@@ -168,22 +168,31 @@ function candidateHero(d: Day | null, op: Op | null | undefined, t: Trade | unde
   return { ...base, stage: '보유 중', state: `${shares(t.heldAfter)} 보유 · 평균 ${won(t.avgBuyPrice)} · ${sell}`, live: now };
 }
 
-function carryHero(d: Day, op: Op | null | undefined, t: Trade | undefined, sym: { symbol: string; name: string | null }): Hero {
+function carryHero(d: Day, op: Op | null | undefined, t: Trade | undefined, sym: { symbol: string; name: string | null }, buyDate: string | null): Hero {
   const T = times(op), now = isLive(d, op);
   const held = t?.heldBefore ?? t?.heldAfter ?? 0;
+  const from = buyDate ? ` · ${md(buyDate)} 매수분` : '';
   const base = { stage: '이월 보유 · 매도 우선', name: sym.name ?? sym.symbol, code: sym.symbol, live: now, flow: flowOf(d, op, t, true),
     amountLabel: '매도 금액', amount: t ? t.sellAmount : null, pnl: t ? t.realizedPnl : null, pnlKnown: sold(t) };
-  if (!t || t.sellOrderQty === null) return { ...base, state: `${shares(held)} 이월 · ${now ? `${T.buy} 시가 매도 예정` : '매도 기록 없음'}` };
-  if (!t.heldAfter) return { ...base, live: false, stage: '이월 보유 · 매도 완료', state: `${shares(t.sellQty)} 매도 · 평균 ${won(t.avgSellPrice)}` };
-  return { ...base, state: `${shares(held)} 이월 · ${shares(t.sellQty)} 매도${t.sellCancelState === 'requested' ? ' · 잔량 취소 확인 중' : t.sellCancelState === 'confirmed' ? ` · ${shares(t.heldAfter)} 계속 이월` : ' · 매도 주문 접수'}` };
+  if (!t || t.sellOrderQty === null) return { ...base, state: `${shares(held)} 이월${from} · ${now ? `${T.buy} 시가 매도 예정` : '매도 기록 없음'}` };
+  if (!t.heldAfter) return { ...base, live: false, stage: '이월 보유 · 매도 완료', state: `${shares(t.sellQty)} 매도${from} · 평균 ${won(t.avgSellPrice)}` };
+  return { ...base, state: `${shares(held)} 이월${from} · ${shares(t.sellQty)} 매도${t.sellCancelState === 'requested' ? ' · 잔량 취소 확인 중' : t.sellCancelState === 'confirmed' ? ` · ${shares(t.heldAfter)} 계속 이월` : ' · 매도 주문 접수'}` };
 }
 
-export function stockHeroes(d: Day | null, op: Op | null | undefined): Hero[] {
+/** Buy date of a carried stock, only when exactly one earlier trade record of that stock has activity that day. */
+const buyDateOf = (records: Snapshot['records'] | undefined, symbol: string, date: string) => {
+  const recs = (records ?? []).filter((r) => r.symbol === symbol && r.tradingDate && r.tradingDate < date);
+  return recs.length === 1 ? recs[0]!.tradingDate! : null;
+};
+export function stockHeroes(d: Day | null, op: Op | null | undefined, records?: Snapshot['records']): Hero[] {
   if (!d) return [candidateHero(null, op, undefined, null)];
   const out: Hero[] = [];
   const cand = d.stocks?.find((s) => s.role === 'candidate') ?? (d.pick ?? null);
   out.push(candidateHero(d, op, d.trades.find((t) => isCandidate(t) && t.symbol === cand?.symbol) ?? d.trades.find(isCandidate), cand ?? null));
-  for (const c of d.stocks?.filter((s) => s.role === 'carry') ?? []) out.push(carryHero(d, op, d.trades.find((t) => t.carry && t.symbol === c.symbol), c));
+  // carried shares (also when today's pick is the same stock, which the stocks list then holds only once)
+  const carried = d.trades.filter((t) => t.carry);
+  for (const t of carried) out.push(carryHero(d, op, t, { symbol: t.symbol, name: t.name }, buyDateOf(records, t.symbol, d.date)));
+  for (const c of d.stocks?.filter((s) => s.role === 'carry' && !carried.some((t) => t.symbol === s.symbol)) ?? []) out.push(carryHero(d, op, undefined, c, buyDateOf(records, c.symbol, d.date)));
   return out;
 }
 
@@ -271,7 +280,7 @@ export function homeBodyHtml(s: Snapshot | null, error: boolean): string {
         <div><dt>다음 행동</dt><dd>${esc(nextAction(s))}</dd></div>
       </dl>
       ${flowHtml(flowOf(null, op, undefined))}
-      <p class="lt-mini">실제 주문 ${esc(op.realOrders)}건 · 보유 0주 · 매수 0원 · 실현손익 ${DASH} · 거래 수익률 ${DASH}</p>
+      <p class="lt-mini">실제 주문 ${esc(op.realOrders)}건 · 보유 0주 · 매수 0원 · 실현손익 ${DASH} · 청산 수익률 ${DASH}</p>
     </div>
     ${op.startDate ? `<p class="lt-go"><a class="lt-day-link" href="${esc(dayLink(op.startDate))}">${esc(md(op.startDate))} 실전 상세 <span aria-hidden="true">→</span></a></p>` : ''}`;
   }
@@ -280,12 +289,12 @@ export function homeBodyHtml(s: Snapshot | null, error: boolean): string {
   const anySale = !!d?.trades.some(sold);
   const evs = eventsOf(s).filter((e) => !date || kstDay(Date.parse(e.at)) === date).slice(-3).reverse();
   return `<p class="lt-dateline"><span>대상 날짜</span> <strong>${date ? esc(mdw(date)) : DASH}</strong>${d ? ` ${resultTag(d.result)}` : ''}${d && !isLive(d, op) ? ' <small>그날 마감 기준</small>' : ''}</p>
-    ${heroesHtml(stockHeroes(d, op))}
+    ${heroesHtml(stockHeroes(d, op, s.records))}
     <dl class="lt-nums lt-nums-4">
       <div><dt>보유 수량</dt><dd>${esc(shares(d?.heldAfter))}</dd></div>
       <div><dt>실현손익</dt><dd>${pnlHtml(d?.realizedPnl, anySale)}</dd></div>
       <div><dt>평균 체결가</dt><dd>${esc(won(lead?.avgBuyPrice ?? null))}</dd></div>
-      <div><dt>거래 수익률</dt><dd>${pctHtml(d?.trades.find((t) => t.returnPct !== null)?.returnPct ?? null)}</dd></div>
+      <div><dt>청산 수익률 <small>매도분 원가 대비</small></dt><dd>${pctHtml(d?.trades.find((t) => t.returnPct !== null)?.returnPct ?? null)}</dd></div>
     </dl>
     <div class="lt-recent"><span class="lt-target-label">최근 이벤트</span>${evs.length ? timelineHtml(evs) : `<p>${DASH}</p>`}</div>
     ${date ? `<p class="lt-go"><a class="lt-day-link" href="${esc(dayLink(date))}">이날 실전 상세 <span aria-hidden="true">→</span></a></p>` : ''}`;
@@ -348,7 +357,7 @@ export function tradeHtml(t: Trade) {
       <div><dt>${t.carry ? '이월분 매도' : '종가 매도'}</dt><dd>${esc(sellText(t))}</dd></div>
       <div><dt>이월 잔량</dt><dd>${esc(shares(t.heldAfter))}</dd></div>
       <div><dt>실현손익</dt><dd>${pnlHtml(t.realizedPnl, sold(t))}</dd></div>
-      <div><dt>거래 수익률</dt><dd>${pctHtml(t.returnPct)}</dd></div>
+      <div><dt>청산 수익률 <small>매도분 원가 대비</small></dt><dd>${pctHtml(t.returnPct)}</dd></div>
     </dl></section>`;
 }
 const navHtmlFor = (nav: { prev?: string; next?: string }) => `<p class="lt-nav">${nav.prev ? `<a href="${esc(dayLink(nav.prev))}">← ${esc(mdw(nav.prev))}</a>` : '<span></span>'}<a href="/live/">목록으로</a>${nav.next ? `<a href="${esc(dayLink(nav.next))}">${esc(mdw(nav.next))} →</a>` : '<span></span>'}</p>`;

@@ -178,3 +178,5 @@
   .live-page .lp-steps li { grid-template-columns: auto minmax(0, 1fr); }
   .live-page .lp-steps small, .live-page .lp-steps li:not(:has(time)) small { grid-column: 1 / -1; }
 }
+.live-page .lp-origin { margin: 0; color: var(--muted); font: 500 .85rem/1.5 var(--body); }
+.live-page .lp-origin a { color: var(--text); font-weight: 700; }

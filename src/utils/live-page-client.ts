@@ -69,7 +69,7 @@ export function connectLivePage() {
           if (s && (!day || Date.parse(s.updatedAt) >= Date.parse(day.updatedAt))) day = s;
         } catch { failed = true; dayFailed = true; }
         const days = index?.days.map((d) => d.date).sort() ?? [];
-        const html = dayDetailHtml(date, day, research.find((r) => r.date === date), event, {
+        const html = dayDetailHtml(date, day, research, event, {
           prev: [...days].reverse().find((d) => d < date), next: days.find((d) => d > date), startDate: index?.startDate ?? null, today, failed: dayFailed && !day });
         if (html !== painted) { dayBox.innerHTML = html; painted = html; if (day) markNew(dayBox); }
         // jump once: to the linked event, or to the model section named in the address (#m-...)

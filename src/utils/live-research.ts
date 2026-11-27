@@ -6,6 +6,7 @@ import { getResearchDays, premarketState, formatStamp, tableNames, displayName, 
 export type LiveResearchDay = {
   date: string;
   market: string;
+  models: number;  // runs of any model that day (0 = nothing published yet)
   run: null | {
     model: string; slug: string; name: string; publishedAt: string | null; published: boolean;
     state: { key: string; label: string; note: string | null }; detail: string | null;
@@ -18,10 +19,10 @@ export async function liveResearchDays(): Promise<LiveResearchDay[]> {
   const days = await getResearchDays();
   return days.map((d) => {
     const run = d.data.models.find((m) => m.role === 'operating');
-    if (!run) return { date: d.id, market: d.data.market, run: null };
+    if (!run) return { date: d.id, market: d.data.market, models: d.data.models.length, run: null };
     const st = premarketState(run);
     return {
-      date: d.id, market: d.data.market,
+      date: d.id, market: d.data.market, models: d.data.models.length,
       run: {
         model: run.model, slug: modelSlug(run.model), name: tableNames(d.data.models).get(run.model) ?? displayName(run),
         publishedAt: run.premarket.publishedAt ? formatStamp(run.premarket.publishedAt, false) ?? null : null,
