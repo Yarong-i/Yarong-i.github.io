@@ -56,6 +56,8 @@ jobs:
           cp _data/src/content/research/*.json src/content/research/ 2>/dev/null || true
           cp _data/src/content/performance/*.json src/content/performance/ 2>/dev/null || true
           echo "records: $(ls src/content/research/*.json 2>/dev/null | wc -l) days, data commit $(git -C _data rev-parse --short HEAD)"
+          # Last durable live-trading snapshot (the page polls the live endpoint for anything newer).
+          if [ -f _data/live/live-trading.json ]; then mkdir -p data && cp _data/live/live-trading.json data/live-trading.json; fi
       - name: Check and build
         run: npm run build
       - uses: actions/upload-pages-artifact@v4

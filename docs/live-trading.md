@@ -57,9 +57,19 @@ endpoint가 빈 문자열이면 요청하지 않고 기존 빌드 기록 또는 
 
 - 화면: `LiveTrading.astro`는 오늘의 추천과 같은 2열 격자·글꼴·괘선을 쓰고, 운영 모델 → 실전 성적 → 현재 상태 → 시각별 이력 순서로 보인다.
   빌드와 브라우저 갱신이 같은 렌더러(`src/utils/live-trading-view.ts`)를 쓴다. 상태는 색이 아니라 글자 라벨로 구분한다.
-- 서버 exporter: 투자 서버에 읽기 전용(sqlite `mode=ro`) exporter가 있다. 실행기 원장을 snapshotSchema로 바꿔 원자적으로 쓴다.
-  updatedAt은 실행기 서비스가 동작 중일 때 원장을 읽은 시각이며, 서비스가 멈추면 이전 파일을 그대로 둔다(홈페이지에 지연 표시).
-  주문 전송 OFF의 모의 행(DRY)은 내보내지 않는다. operators는 주문 전송 ON이고 시작일이 지난 뒤에만 넣는다.
-  이 전략은 −1.5%/+3%를 관찰만 하고 익절·손절 주문을 내지 않으므로 takeProfitPrice/stopLossPrice는 null이다.
-  체결 이벤트 시각은 증권사 체결 시각이 아니라 실행기가 체결을 확인한 시각이며, 이벤트 문구에 그렇게 적는다.
-- 공개 HTTPS 주소: 아직 없다. 투자 서버에는 공개 웹 포트가 없어 DNS·인증서·방화벽 설정이 필요하다. 그 전까지 endpoint는 빈 문자열이다.
+- 서버 exporter(투자 서버의 별도 서비스): 실행기 원장·설정을 읽기 전용으로 읽어 5초마다 공개 JSON을 원자적으로 쓴다.
+  KIS를 호출하지 않고, 실행기를 시작·정지·변경하지 않는다. 실행기가 멈추면 이전 파일을 그대로 둔다.
+- 상태: 주문 예정(planned) / 증권사 접수(*_submitted) / 부분 체결(*_partial) / 취소 요청 / 취소 확인 / 보유 / 매도 체결(closed) /
+  이월(carried) / 결과 미확인(unconfirmed) / 주문 거절 / 주문 미전송. −1.5%·+3%는 관찰 이벤트(상태 없음)로만 보이며
+  익절·손절 주문 상태나 기준가(takeProfitPrice/stopLossPrice=null)로 표시하지 않는다.
+- 추가 필드(선택): `brokerCheckedAt`(원장에 남은 마지막 KIS 조회 시각), `operation`(model, orderSend, startDate,
+  phase=off|before_start|pre_open|in_session|closed, tradingDate, realOrders), 기록별 tradingDate·cancelledQuantity·
+  soldQuantity·soldAmount·averageSellPrice·realizedPnl(전략 손익, 비용 전)·carriedQuantity.
+  updatedAt은 데이터 생성 시각, 기록·이벤트 시각은 원장의 시각이며 조회 때마다 갱신하지 않는다.
+- 공개 제외: 계좌번호, 증권사 주문번호, 계좌 전체 가용현금(plan sizing), 개인 보유분, 원본 응답·오류 문구, 토큰, 웹훅, 주문 OFF 모의 행.
+- 서버가 꺼져도: exporter가 공개 데이터 저장소 `live/live-trading.json`에 내용이 바뀔 때(최소 1분 간격), 매시, 서비스 종료 시 push한다.
+  사이트 빌드(deploy.yml)와 `npm run research:pull`이 이 파일을 `data/live-trading.json`으로 복사해 페이지에 넣는다.
+  화면 상태줄: 시작 전 `실전 활성화 · M/D 시작 예정 · 실제 주문 N건`, 장 정상 종료 후 `장 마감 · 마지막 확인 HH:MM`,
+  장중 60초 넘게 갱신이 없으면 `갱신 지연 · 마지막 확인 HH:MM`. 연결 실패를 주문 없음·보유 0주로 바꾸지 않는다.
+- 공개 HTTPS 주소(10초 실시간 갱신): 아직 없다. 투자 서버의 80/443은 클라우드 방화벽에서 막혀 있고 도메인 레코드도 없다.
+  그 전까지 endpoint는 빈 문자열이며, 페이지는 마지막 빌드에 들어간 내구 사본과 그 상태줄을 보여 준다.

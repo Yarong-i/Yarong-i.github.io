@@ -14,5 +14,8 @@ for (const dir of ['research', 'performance']) {
   fs.mkdirSync(to, { recursive: true });
   for (const f of fs.existsSync(from) ? fs.readdirSync(from) : []) if (f.endsWith('.json')) fs.copyFileSync(path.join(from, f), path.join(to, f));
 }
+// The last durable live-trading snapshot (pushed by the server's exporter), shown while the server is off.
+const live = path.join(tmp, 'live', 'live-trading.json');
+if (fs.existsSync(live)) { fs.mkdirSync('data', { recursive: true }); fs.copyFileSync(live, path.join('data', 'live-trading.json')); }
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log('research records copied from Yarong-i/yarong-research-data');
