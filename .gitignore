@@ -24,3 +24,5 @@ deploy/
 
 # Public live-trading snapshot (exported separately)
 /data/live-trading.json
+# Per-date live archives copied in at build from the data repository
+/public/live/days/

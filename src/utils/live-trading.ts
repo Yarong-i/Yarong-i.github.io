@@ -10,6 +10,7 @@ export const labels = {
   unconfirmed: '결과 미확인', not_sent: '주문 미전송',
 } as const;
 const number = z.number().nonnegative();
+const eventId = z.string().regex(/^[a-z][a-z0-9-]{0,60}$/);
 const statusSchema = z.enum(Object.keys(labels) as [keyof typeof labels, ...(keyof typeof labels)[]]);
 const record = z.object({
   id: z.string().min(1), model: z.string().min(1), symbol: z.string().regex(/^\d{6}$/), name: z.string().min(1),
@@ -19,7 +20,8 @@ const record = z.object({
   requestedQuantity: number.nullable(), filledQuantity: number.nullable(), filledAmount: number.nullable(),
   heldQuantity: number.nullable(), averagePrice: number.nullable(),
   takeProfitPrice: number.nullable(), stopLossPrice: number.nullable(),
-  events: z.array(z.object({ at: z.iso.datetime({ offset: true }), text: z.string().min(1), status: statusSchema.optional() })),
+  // id: stable public event ID (e.g. e123) used by date+event links such as Discord alerts
+  events: z.array(z.object({ id: eventId.nullable().optional(), at: z.iso.datetime({ offset: true }), text: z.string().min(1), status: statusSchema.optional() })),
   // optional detail (all from the ledger; unknown = null)
   tradingDate: z.iso.date().optional(),
   cancelledQuantity: number.nullable().optional(), soldQuantity: number.nullable().optional(),
@@ -30,6 +32,9 @@ export const snapshotSchema = z.object({
   version: z.literal(1), updatedAt: z.iso.datetime({ offset: true }), records: z.array(record),
   // updatedAt = when the server read the ledger (data generation); brokerCheckedAt = newest KIS read in the ledger
   brokerCheckedAt: z.iso.datetime({ offset: true }).nullable().optional(),
+  // per-date archive files carry their date; day-level events (no-buy reason, post-close report) have IDs too
+  date: z.iso.date().optional(),
+  dayEvents: z.array(z.object({ id: eventId, at: z.iso.datetime({ offset: true }), date: z.iso.date(), text: z.string().min(1) })).optional(),
   operation: z.object({
     model: z.string().min(1), orderSend: z.boolean(), startDate: z.iso.date().nullable(),
     phase: z.enum(['off', 'before_start', 'pre_open', 'in_session', 'closed']),

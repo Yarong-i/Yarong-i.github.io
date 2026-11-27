@@ -26,6 +26,59 @@ function hm(iso: string, now: number) {
   return day === kstDay(now) ? clock : `${md(day)} ${clock}`;
 }
 
+type Rec = Snapshot['records'][number];
+type Ev = Rec['events'][number] & { name: string; symbol: string };
+
+/** Stable link to one event: date (KST) + event ID. Discord alerts use the same form. */
+export const eventLink = (date: string, id: string) => `/live/?date=${encodeURIComponent(date)}&event=${encodeURIComponent(id)}`;
+
+function posRow(r: Rec) {
+  const has = (v: number | null | undefined) => v !== null && v !== undefined;
+  const facts = [
+    r.tradingDate ? `거래일 ${md(r.tradingDate)}` : '',
+    `주문 ${amount(r.requestedQuantity, '주')} · 체결 ${amount(r.filledQuantity, '주')}`,
+    has(r.cancelledQuantity) && r.cancelledQuantity! > 0 ? `취소 ${amount(r.cancelledQuantity!, '주')}` : '',
+    r.averagePrice !== null ? `평균 체결가 ${amount(r.averagePrice, '원')}` : '',
+    r.filledAmount ? `매수 ${amount(r.filledAmount, '원')}` : '',
+    r.soldQuantity ? `매도 ${amount(r.soldQuantity, '주')} ${amount(r.soldAmount ?? null, '원')}${has(r.averageSellPrice) ? ` (평균 ${amount(r.averageSellPrice!, '원')})` : ''}` : '',
+    has(r.realizedPnl) && r.soldQuantity ? `전략 손익 ${signed(r.realizedPnl!, '원')}` : '',
+    `보유 ${amount(r.heldQuantity, '주')}`,
+    r.carriedQuantity ? `이월 ${amount(r.carriedQuantity, '주')}` : '',
+    r.takeProfitPrice !== null ? `익절 기준 ${amount(r.takeProfitPrice, '원')}` : '',
+    r.stopLossPrice !== null ? `손절 기준 ${amount(r.stopLossPrice, '원')}` : '',
+  ].filter(Boolean);
+  return `<li class="lt-pos">
+    <div class="lt-stock"><strong>${esc(r.name)}</strong><small>${esc(r.symbol)} · ${esc(r.model)}</small></div>
+    <div class="lt-state">${tag(r.status)}<small>${r.statusSince ? `${time(r.statusSince)}부터 · ` : ''}${time(r.updatedAt, ' 기록')}</small></div>
+    <p class="lt-facts">${facts.map(esc).join(' · ')}</p></li>`;
+}
+
+function histRow(e: Ev, focus = false) {
+  const when = e.id ? `<a class="lt-at" href="${esc(eventLink(kstDay(Date.parse(e.at)), e.id))}">${time(e.at)}</a>` : time(e.at);
+  return `<li${focus ? ' class="lt-focus" aria-current="true"' : ''}>${when}<span>${e.status ? tag(e.status) : ''}</span>
+    <p><strong>${esc(e.name)}</strong> <small>${esc(e.symbol)}</small> ${esc(e.text)}${focus ? ' <small>· 링크한 사건</small>' : ''}</p></li>`;
+}
+
+/** One linked event and what happened after it (same trade), or null when the archive does not have it yet. */
+export function liveEventHtml(s: Snapshot, id: string): string | null {
+  const day = s.dayEvents?.find((e) => e.id === id);
+  if (day) {
+    const others = (s.dayEvents ?? []).filter((e) => e.id !== id).sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+    const row = (e: typeof day, focus: boolean) => histRow({ id: e.id, at: e.at, text: e.text, name: md(e.date), symbol: '' }, focus);
+    return block('사건', `<ol class="lt-history">${row(day, true)}</ol>`)
+      + (others.length ? block('같은 날 기록', `<ol class="lt-history">${others.map((e) => row(e, false)).join('')}</ol>`) : '');
+  }
+  const rec = s.records.find((r) => r.events.some((e) => e.id === id));
+  if (!rec) return null;
+  const evs = [...rec.events].sort((a, b) => Date.parse(a.at) - Date.parse(b.at)).map((e) => ({ ...e, name: rec.name, symbol: rec.symbol }));
+  const at = evs.findIndex((e) => e.id === id);
+  const before = evs.slice(0, at), after = evs.slice(at + 1);
+  return block('사건과 이후 처리', `<ol class="lt-history">${evs.slice(at).map((e, k) => histRow(e, k === 0)).join('')}</ol>`,
+      after.length ? `이후 ${after.length}건 · 시각순 · KST` : '이후 처리 기록 아직 없음 · 10초마다 다시 확인합니다')
+    + block('이 거래의 현재 상태', `<ul class="lt-rows">${posRow(rec)}</ul>`, '−1.5%·+3%는 관찰 기록이며 익절·손절 주문이 아닙니다. 증권사 접수는 체결이 아닙니다.')
+    + (before.length ? block('앞선 기록', `<ol class="lt-history">${before.map((e) => histRow(e)).join('')}</ol>`) : '');
+}
+
 /** The one-line state shown beside the title. A failed connection never turns into "no orders" or "0 shares". */
 export function liveStatus(s: Snapshot | null, now: number, staleMs: number, failed = false): string {
   if (!s) return failed ? '연결 실패 · 확인된 기록 없음' : '연동 대기';
@@ -47,7 +100,7 @@ export function liveStatus(s: Snapshot | null, now: number, staleMs: number, fai
 /** Data generation time and the last broker check, kept apart; the browser's receive time is added separately. */
 export function liveChecked(s: Snapshot | null, receivedAt?: string): string {
   if (!s) return '실제 기록이 연결되면 확인 시각과 함께 표시합니다.';
-  return `데이터 생성 ${formatTime(s.updatedAt)} · 마지막 증권사 확인 ${s.brokerCheckedAt ? formatTime(s.brokerCheckedAt) : '기록 없음'}`
+  return `마지막 정상 확인 ${formatTime(s.updatedAt)} · 마지막 증권사 확인 ${s.brokerCheckedAt ? formatTime(s.brokerCheckedAt) : '기록 없음'}`
     + `${receivedAt ? ` · 수신 ${formatTime(receivedAt)}` : ''} · KST`;
 }
 
@@ -77,34 +130,14 @@ export function liveBodyHtml(s: Snapshot | null, error: boolean): string {
 
   // ③ 현재 상태
   const now = active.length
-    ? `<ul class="lt-rows">${active.map((r) => {
-        const has = (v: number | null | undefined) => v !== null && v !== undefined;
-        const facts = [
-          r.tradingDate ? `거래일 ${md(r.tradingDate)}` : '',
-          `주문 ${amount(r.requestedQuantity, '주')} · 체결 ${amount(r.filledQuantity, '주')}`,
-          has(r.cancelledQuantity) && r.cancelledQuantity! > 0 ? `취소 ${amount(r.cancelledQuantity!, '주')}` : '',
-          r.averagePrice !== null ? `평균 체결가 ${amount(r.averagePrice, '원')}` : '',
-          r.filledAmount ? `매수 ${amount(r.filledAmount, '원')}` : '',
-          r.soldQuantity ? `매도 ${amount(r.soldQuantity, '주')} ${amount(r.soldAmount ?? null, '원')}${has(r.averageSellPrice) ? ` (평균 ${amount(r.averageSellPrice!, '원')})` : ''}` : '',
-          has(r.realizedPnl) && r.soldQuantity ? `전략 손익 ${signed(r.realizedPnl!, '원')}` : '',
-          `보유 ${amount(r.heldQuantity, '주')}`,
-          r.carriedQuantity ? `이월 ${amount(r.carriedQuantity, '주')}` : '',
-          r.takeProfitPrice !== null ? `익절 기준 ${amount(r.takeProfitPrice, '원')}` : '',
-          r.stopLossPrice !== null ? `손절 기준 ${amount(r.stopLossPrice, '원')}` : '',
-        ].filter(Boolean);
-        return `<li class="lt-pos">
-          <div class="lt-stock"><strong>${esc(r.name)}</strong><small>${esc(r.symbol)} · ${esc(r.model)}</small></div>
-          <div class="lt-state">${tag(r.status)}<small>${r.statusSince ? `${time(r.statusSince)}부터 · ` : ''}${time(r.updatedAt, ' 기록')}</small></div>
-          <p class="lt-facts">${facts.map(esc).join(' · ')}</p></li>`;
-      }).join('')}</ul>`
+    ? `<ul class="lt-rows">${active.map(posRow).join('')}</ul>`
     : empty(waiting ?? (op && op.realOrders === 0 ? '실제 주문 0건' : records.length ? '진행 중인 거래 없음' : '공개된 거래 기록 없음'));
 
   // ④ 시각별 이력 (newest first)
   const events = records.flatMap((r) => r.events.map((e) => ({ ...e, name: r.name, symbol: r.symbol })))
     .sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
   const history = events.length
-    ? `<ol class="lt-history">${events.slice(0, HISTORY_LIMIT).map((e) => `<li>${time(e.at)}<span>${e.status ? tag(e.status) : ''}</span>
-        <p><strong>${esc(e.name)}</strong> <small>${esc(e.symbol)}</small> ${esc(e.text)}</p></li>`).join('')}</ol>`
+    ? `<ol class="lt-history">${events.slice(0, HISTORY_LIMIT).map((e) => histRow(e)).join('')}</ol>`
     : empty(waiting ?? '아직 공개된 이벤트가 없습니다');
 
   return block('운영 모델', models)

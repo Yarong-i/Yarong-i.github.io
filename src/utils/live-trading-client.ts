@@ -49,7 +49,7 @@ export function connectLiveTrading() {
       const payload = JSON.stringify({ ...snapshot, updatedAt: '', brokerCheckedAt: '' });
       if (payload !== lastPayload) { body.innerHTML = liveBodyHtml(snapshot, false); lastPayload = payload; }
       lastTime = stamp; failed = false; current = snapshot;
-      // 데이터 생성 = the server's updatedAt; 수신 = when this browser got it. Never merged.
+      // 마지막 정상 확인 = the server's updatedAt (ledger read while the executor runs); 수신 = when this browser got it.
       checked.textContent = liveChecked(snapshot, new Date().toISOString());
     } catch { failed = true; } finally { clearTimeout(timeout); busy = false; freshness(); if (!document.hidden) timer = setTimeout(poll, config.pollMs); }
   }

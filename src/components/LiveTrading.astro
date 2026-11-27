@@ -3,6 +3,7 @@
 import { liveBodyHtml, liveStatus, liveChecked } from '../utils/live-trading-view';
 import { getLiveTrading } from '../utils/live-trading-loader';
 import { liveTradingConfig } from '../data/live-trading-config';
+import '../styles/live-trading.css';
 const { snapshot, error } = await getLiveTrading();
 // The embedded (last durable) snapshot's time and phase: the browser recomputes the state line from them on load,
 // so a page built hours ago still says 장 마감 / 갱신 지연 correctly when the live endpoint cannot be reached.
@@ -33,36 +34,6 @@ const embedded = snapshot ? JSON.stringify({ updatedAt: snapshot.updatedAt, oper
   .lt-side .lt-checked { color: var(--faint); font-size: .78rem; }
   .lt-body { display: grid; gap: 1.4rem; padding-top: .9rem; border-top: 2px solid var(--text); min-width: 0; }
 
-  .lt-body :global(.lt-block) { display: grid; gap: .45rem; min-width: 0; }
-  .lt-body :global(.lt-label) { margin: 0; padding-bottom: .35rem; border-bottom: 1px solid var(--line-strong); color: var(--faint); font: 600 .74rem var(--body); letter-spacing: .02em; }
-  .lt-body :global(.lt-fine) { margin: 0; color: var(--faint); font: 500 .78rem/1.5 var(--body); }
-  .lt-body :global(.lt-empty) { margin: 0; padding: .55rem 0; border-bottom: 1px solid var(--line); color: var(--muted); font: 500 .88rem/1.5 var(--body); }
-  .lt-body :global(time) { font-variant-numeric: tabular-nums; }
-  .lt-body :global(.lt-rows) { margin: 0; padding: 0; list-style: none; }
-  .lt-body :global(.lt-rows > li) { padding: .55rem 0; border-bottom: 1px solid var(--line); }
-  .lt-body :global(.lt-model) { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .2rem 1rem; }
-  .lt-body :global(.lt-model strong), .lt-body :global(.lt-stock strong) { font: 700 1.05rem/1.25 var(--display); letter-spacing: -.02em; }
-  .lt-body :global(.lt-model span) { color: var(--faint); font: 500 .78rem var(--body); font-variant-numeric: tabular-nums; }
-
-  .lt-body :global(.lt-perf) { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .4rem .75rem; margin: 0; padding: .55rem 0; border-bottom: 1px solid var(--line); }
-  .lt-body :global(.lt-perf dt) { color: var(--faint); font: 600 .74rem var(--body); }
-  .lt-body :global(.lt-perf dd) { margin: .15rem 0 0; font: 800 1.05rem/1.2 var(--display); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-
-  .lt-body :global(.lt-pos) { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .2rem .75rem; }
-  .lt-body :global(.lt-stock), .lt-body :global(.lt-state) { display: grid; gap: .1rem; min-width: 0; }
-  .lt-body :global(.lt-state) { justify-items: end; text-align: right; }
-  .lt-body :global(.lt-pos small), .lt-body :global(.lt-history small) { color: var(--faint); font: 500 .74rem var(--body); }
-  .lt-body :global(.lt-facts) { grid-column: 1 / -1; margin: 0; color: var(--muted); font: 500 .82rem/1.5 var(--body); font-variant-numeric: tabular-nums; }
-  /* Status words are text labels with the picks table's role tag look; no status colours. */
-  .lt-body :global(.lt-tag) { display: inline-block; padding: 0 .35rem; border: 1px solid var(--line-strong); border-radius: 4px; color: var(--muted); font: 600 .72rem/1.45 var(--body); white-space: nowrap; }
-  .lt-body :global(.lt-tag-live) { border-color: var(--text); color: var(--text); }
-
-  .lt-body :global(.lt-history) { margin: 0; padding: 0; list-style: none; }
-  .lt-body :global(.lt-history li) { display: grid; grid-template-columns: 9.5rem 6.6rem minmax(0, 1fr); gap: .2rem .75rem; align-items: baseline; padding: .5rem 0; border-bottom: 1px solid var(--line); }
-  .lt-body :global(.lt-history time) { color: var(--faint); font: 500 .78rem var(--body); }
-  .lt-body :global(.lt-history p) { margin: 0; color: var(--muted); font: 500 .85rem/1.5 var(--body); overflow-wrap: anywhere; }
-  .lt-body :global(.lt-history p strong) { color: var(--text); font-weight: 700; }
-
   @media (max-width: 1100px) {
     .lt { grid-template-columns: minmax(0, 1fr); }
     .lt-side { grid-template-columns: auto minmax(0, 1fr) auto; align-items: baseline; gap: .2rem 1rem; padding-top: 0; border-top: 0; }
@@ -72,11 +43,5 @@ const embedded = snapshot ? JSON.stringify({ updatedAt: snapshot.updatedAt, oper
   @media (max-width: 700px) {
     .lt-side { grid-template-columns: minmax(0, 1fr); }
     .lt-side p:not(.lt-conn):not(.lt-checked) { display: none; }
-    .lt-body :global(.lt-perf) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .lt-body :global(.lt-pos) { grid-template-columns: minmax(0, 1fr); }
-    .lt-body :global(.lt-state) { justify-items: start; text-align: left; }
-    .lt-body :global(.lt-history li) { grid-template-columns: auto minmax(0, 1fr); }
-    .lt-body :global(.lt-history li > span) { justify-self: end; }
-    .lt-body :global(.lt-history p) { grid-column: 1 / -1; }
   }
 </style>

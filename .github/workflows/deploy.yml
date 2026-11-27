@@ -58,6 +58,8 @@ jobs:
           echo "records: $(ls src/content/research/*.json 2>/dev/null | wc -l) days, data commit $(git -C _data rev-parse --short HEAD)"
           # Last durable live-trading snapshot (the page polls the live endpoint for anything newer).
           if [ -f _data/live/live-trading.json ]; then mkdir -p data && cp _data/live/live-trading.json data/live-trading.json; fi
+          # Per-date archives, served at /live/days/<date>.json for event links when the live bucket cannot be read.
+          if [ -d _data/live/days ]; then mkdir -p public/live/days && cp _data/live/days/*.json public/live/days/ 2>/dev/null || true; fi
       - name: Check and build
         run: npm run build
       - uses: actions/upload-pages-artifact@v4

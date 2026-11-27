@@ -17,5 +17,10 @@ for (const dir of ['research', 'performance']) {
 // The last durable live-trading snapshot (pushed by the server's exporter), shown while the server is off.
 const live = path.join(tmp, 'live', 'live-trading.json');
 if (fs.existsSync(live)) { fs.mkdirSync('data', { recursive: true }); fs.copyFileSync(live, path.join('data', 'live-trading.json')); }
+const liveDays = path.join(tmp, 'live', 'days');
+if (fs.existsSync(liveDays)) {
+  fs.mkdirSync(path.join('public', 'live', 'days'), { recursive: true });
+  for (const f of fs.readdirSync(liveDays)) if (f.endsWith('.json')) fs.copyFileSync(path.join(liveDays, f), path.join('public', 'live', 'days', f));
+}
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log('research records copied from Yarong-i/yarong-research-data');
