@@ -60,6 +60,8 @@ jobs:
           if [ -f _data/live/live-trading.json ]; then mkdir -p data && cp _data/live/live-trading.json data/live-trading.json; fi
           # Per-date archives, served at /live/days/<date>.json for event links when the live bucket cannot be read.
           if [ -d _data/live/days ]; then mkdir -p public/live/days && cp _data/live/days/*.json public/live/days/ 2>/dev/null || true; fi
+          # The public list of operating days, for /live/ when the bucket cannot be read.
+          if [ -f _data/live/index.json ]; then mkdir -p public/live && cp _data/live/index.json public/live/index.json; fi
       - name: Check and build
         run: npm run build
       - uses: actions/upload-pages-artifact@v4

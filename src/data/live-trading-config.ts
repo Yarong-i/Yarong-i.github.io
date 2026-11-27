@@ -9,8 +9,11 @@ export const liveTradingConfig = {
   staleMs: 60_000,
 };
 
+const bucketBase = () => liveTradingConfig.endpoint.replace(/latest\.json$/, '');
 /** Where the browser reads one date's archive: the live bucket first (no rebuild needed), then the site's copy. */
 export const archiveUrls = (date: string) => [
-  ...(liveTradingConfig.endpoint ? [liveTradingConfig.endpoint.replace(/latest\.json$/, `days/${date}.json`)] : []),
+  ...(liveTradingConfig.endpoint ? [`${bucketBase()}days/${date}.json`] : []),
   `/live/days/${date}.json`,
 ];
+/** The public list of operating days (the bucket itself cannot be listed). */
+export const indexUrls = () => [...(liveTradingConfig.endpoint ? [`${bucketBase()}index.json`] : []), '/live/index.json'];

@@ -28,13 +28,54 @@ const record = z.object({
   soldAmount: number.nullable().optional(), averageSellPrice: number.nullable().optional(),
   realizedPnl: z.number().nullable().optional(), carriedQuantity: number.nullable().optional(),
 });
+const qty = number.nullable();
+const tradeRow = z.object({
+  symbol: z.string().regex(/^\d{6}$/), name: z.string().nullable(), carry: z.boolean(), heldBefore: number.optional(),
+  orderQty: qty, orderState: z.string().nullable(), filledQty: number, avgBuyPrice: qty, buyAmount: number,
+  cancelledQty: number, cancelState: z.enum(['none', 'requested', 'confirmed', 'unresolved']),
+  sellOrderQty: qty, sellQty: number, avgSellPrice: qty, sellAmount: number,
+  sellCancelledQty: number, sellCancelState: z.enum(['none', 'requested', 'confirmed', 'unresolved']),
+  heldAfter: number, realizedPnl: z.number(), returnPct: z.number().nullable(),
+});
+export const dayResults = {
+  done: '매매 완료', no_pick: '추천 없음', pick_failed: '추천 생성 실패', not_attempted: '매수 미시도', unfilled: '미체결',
+  carried: '이월', check: '확인 필요', in_progress: '진행 중',
+} as const;
+const stockRef = z.object({ symbol: z.string().regex(/^\d{6}$/), name: z.string().nullable() });
+const resultSchema = z.enum(Object.keys(dayResults) as [keyof typeof dayResults, ...(keyof typeof dayResults)[]]);
+export const daySummary = z.object({
+  date: z.iso.date(), model: z.string(), result: resultSchema, reason: z.string().nullable(),
+  symbol: z.string().nullable(), name: z.string().nullable(),
+  // today's candidate (the Sonnet pick) and shares carried in from earlier days
+  pick: stockRef.nullable().optional(), pickStatus: z.enum(['waiting', 'ok', 'none', 'failed']).optional(),
+  stocks: z.array(stockRef.extend({ role: z.enum(['candidate', 'carry']) })).optional(),
+  buyAmount: number, sellAmount: number, realizedPnl: z.number(), unrealizedPnl: z.number().nullable(),
+  fee: qty, tax: qty, costConfirmed: z.boolean(), reportAt: z.iso.datetime({ offset: true }).nullable(),
+  heldAfter: number, trades: z.array(tradeRow),
+});
+export const operatorSchema = z.object({
+  model: z.string().min(1), since: z.iso.date(), through: z.iso.date(),
+  updatedAt: z.iso.datetime({ offset: true }),
+  realizedPnl: z.number().nullable(), unrealizedPnl: z.number().nullable(), returnPct: z.number().nullable(),
+  closedTrades: number.int().nullable(), winningTrades: number.int().nullable(),
+  costBasis: z.enum(['net', 'gross', 'unknown']), returnMethod: z.string().min(1).nullable(),
+});
+/** live/index.json: the public list of operating days (the bucket cannot be listed). */
+export const indexSchema = z.object({
+  version: z.literal(1), updatedAt: z.iso.datetime({ offset: true }), model: z.string(), startDate: z.iso.date().nullable(),
+  operators: z.array(operatorSchema).optional(),
+  days: z.array(daySummary.pick({ date: true, result: true, reason: true, symbol: true, name: true, stocks: true, buyAmount: true, realizedPnl: true, heldAfter: true, costConfirmed: true })),
+});
 export const snapshotSchema = z.object({
   version: z.literal(1), updatedAt: z.iso.datetime({ offset: true }), records: z.array(record),
   // updatedAt = when the server read the ledger (data generation); brokerCheckedAt = newest KIS read in the ledger
   brokerCheckedAt: z.iso.datetime({ offset: true }).nullable().optional(),
   // per-date archive files carry their date; day-level events (no-buy reason, post-close report) have IDs too
   date: z.iso.date().optional(),
-  dayEvents: z.array(z.object({ id: eventId, at: z.iso.datetime({ offset: true }), date: z.iso.date(), text: z.string().min(1) })).optional(),
+  dayEvents: z.array(z.object({ id: eventId, at: z.iso.datetime({ offset: true }), date: z.iso.date(), text: z.string().min(1), test: z.boolean().optional() })).optional(),
+  // summary of the target day (home) / of this archive's date, as of the end of that day
+  day: daySummary.nullable().optional(),
+  summary: daySummary.nullable().optional(),
   operation: z.object({
     model: z.string().min(1), orderSend: z.boolean(), startDate: z.iso.date().nullable(),
     phase: z.enum(['off', 'before_start', 'pre_open', 'in_session', 'closed']),

@@ -1,47 +1,46 @@
 ---
-// Home section right under the picks: same grid, type and ruled lines as 오늘의 추천 (no box, no own colours).
-import { liveBodyHtml, liveStatus, liveChecked } from '../utils/live-trading-view';
+// Home summary of live trading, right under the picks (same grid, type and ruled lines as 오늘의 추천).
+// Left: model, current state, next action. Right: the target day in numbers and the latest event.
+// The date list (/live/) is for comparing days, the day page (/live/?date=) for orders and fills.
+import { homeSideHtml, homeBodyHtml, liveStatus, liveChecked } from '../utils/live-trading-view';
 import { getLiveTrading } from '../utils/live-trading-loader';
 import { liveTradingConfig } from '../data/live-trading-config';
 import '../styles/live-trading.css';
 const { snapshot, error } = await getLiveTrading();
-// The embedded (last durable) snapshot's time and phase: the browser recomputes the state line from them on load,
-// so a page built hours ago still says 장 마감 / 갱신 지연 correctly when the live endpoint cannot be reached.
-const embedded = snapshot ? JSON.stringify({ updatedAt: snapshot.updatedAt, operation: snapshot.operation ?? null }) : undefined;
+const status = error ? '기록 확인 불가' : liveStatus(snapshot, Date.now(), liveTradingConfig.staleMs);
+// The embedded (last durable) snapshot: the browser recomputes the state from it on load and while it ages.
+const embedded = snapshot ? JSON.stringify(snapshot) : undefined;
 ---
-<section class="lt shell" id="live-trading" data-endpoint={liveTradingConfig.endpoint} data-snapshot-time={snapshot?.updatedAt} data-embedded={embedded} data-error={error ? "true" : undefined} aria-labelledby="live-title">
-  <div class="lt-side">
+<section class="lt shell" id="live-trading" data-endpoint={liveTradingConfig.endpoint} data-snapshot-time={snapshot?.updatedAt} data-error={error ? 'true' : undefined} aria-labelledby="live-title">
+  <div class="lt-side lt-title">
     <h2 id="live-title">실전 운용</h2>
-    <p>어떤 모델이 운용하고, 얼마를 벌었고, 지금 무엇을 기다리는지.</p>
-    <p class="lt-conn"><span class="connection">{error ? '기록 확인 불가' : liveStatus(snapshot, Date.now(), liveTradingConfig.staleMs)}</span></p>
+    <a class="lt-index-link" href="/live/">날짜별 실전 기록 <span aria-hidden="true">→</span></a>
+  </div>
+  <div class="lt-side lt-facts-col">
+    <div data-live-side set:html={homeSideHtml(snapshot, status)} />
     <p class="lt-checked" data-live-checked>{liveChecked(snapshot)}</p>
   </div>
-  <div class="lt-body" data-live-body set:html={liveBodyHtml(snapshot, error)} />
+  <div class="lt-body lt-summary" data-live-body set:html={homeBodyHtml(snapshot, error)} />
+  {embedded && <script type="application/json" data-live-embedded set:html={embedded.replace(/</g, '\\u003c')} />}
 </section>
 <script>
   import { connectLiveTrading } from '../utils/live-trading-client';
   connectLiveTrading();
 </script>
 <style>
-  /* Mirrors .d-today: title column on the left, content at the picks table's width on the right. */
-  .lt { display: grid; grid-template-columns: minmax(16rem, 1fr) minmax(0, 38rem); gap: 1.6rem clamp(2rem, 4vw, 3.5rem); align-items: start; padding-block: 0 clamp(3rem, 7vw, 5rem); }
-  .lt-side { display: grid; gap: .4rem; justify-items: start; padding-top: 1rem; border-top: 2px solid var(--text); }
+  /* Wide: title and facts on the left, the day summary on the right. Phones: title, then the stock and its state
+     (before scrolling), then the facts. */
+  .lt { display: grid; grid-template-columns: minmax(16rem, 1fr) minmax(0, 38rem); grid-template-areas: 'title body' 'facts body';
+    grid-template-rows: auto 1fr; gap: .6rem clamp(2rem, 4vw, 3.5rem); align-items: start; padding-block: 0 clamp(3rem, 7vw, 5rem); }
+  .lt-title { grid-area: title; padding-top: 1rem; border-top: 2px solid var(--text); }
+  .lt-facts-col { grid-area: facts; }
+  .lt-body { grid-area: body; }
+  .lt-side { display: grid; gap: .55rem; justify-items: start; align-content: start; }
   .lt-side h2 { margin: 0; font: 800 clamp(1.8rem, 2.8vw, 2.4rem)/1.1 var(--d-font, var(--display)); letter-spacing: -.04em; }
-  .lt-side p { margin: 0; color: var(--muted); font: 500 .98rem/1.55 var(--d-font, var(--body)); }
-  .lt-side .lt-conn { margin-top: .4rem; }
-  .connection { color: var(--text); font: 700 .82rem var(--body); }
-  .connection::before { content: ''; display: inline-block; width: 6px; height: 6px; margin-right: .45rem; border-radius: 50%; background: var(--faint); vertical-align: .12em; }
-  .lt-side .lt-checked { color: var(--faint); font-size: .78rem; }
-  .lt-body { display: grid; gap: 1.4rem; padding-top: .9rem; border-top: 2px solid var(--text); min-width: 0; }
-
+  .lt-side .lt-checked { margin: .2rem 0 0; color: var(--faint); font: 500 .78rem/1.5 var(--body); }
+  .lt-body { display: grid; gap: 1.1rem; padding-top: .9rem; border-top: 2px solid var(--text); min-width: 0; }
   @media (max-width: 1100px) {
-    .lt { grid-template-columns: minmax(0, 1fr); }
-    .lt-side { grid-template-columns: auto minmax(0, 1fr) auto; align-items: baseline; gap: .2rem 1rem; padding-top: 0; border-top: 0; }
-    .lt-side .lt-conn { grid-column: 1 / -1; margin-top: .2rem; }
-    .lt-side .lt-checked { grid-column: 1 / -1; }
-  }
-  @media (max-width: 700px) {
-    .lt-side { grid-template-columns: minmax(0, 1fr); }
-    .lt-side p:not(.lt-conn):not(.lt-checked) { display: none; }
+    .lt { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'title' 'body' 'facts'; grid-template-rows: none; gap: 1rem; }
+    .lt-title { padding-top: 0; border-top: 0; }
   }
 </style>

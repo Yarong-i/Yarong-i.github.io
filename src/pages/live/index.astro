@@ -1,39 +1,39 @@
 ---
-// One live-trading event and what happened after it: /live/?date=YYYY-MM-DD&event=<id> (the form Discord alerts link to).
-// Static page; the browser reads the date's public archive (live bucket first, then the site's copy) every 10 s.
+// /live/                      date list (compare days)
+// /live/?date=YYYY-MM-DD      one day as of that day: orders, fills, cancels, close sell, carry, P&L, KST timeline
+// /live/?date=…&event=<id>    the same day with that event highlighted (the form Discord alerts link to)
+// Static page; the browser reads the public bucket (then the site's build copy) every 10 s.
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import '../../styles/live-trading.css';
 ---
-<BaseLayout title="실전 운용 기록 — YARONG" description="실전 운용의 한 사건과 이후 처리 결과">
-  <section class="lt-event shell" id="live-event" aria-labelledby="lt-event-title">
+<BaseLayout title="날짜별 실전 기록 — YARONG" description="실전 운용의 날짜별 결과와 하루 주문·체결 기록">
+  <section class="lt-page shell" id="live-page" aria-labelledby="lt-page-title">
     <div class="lt-side">
       <p class="lt-crumb"><a href="/#live-trading">← 실전 운용</a></p>
-      <h1 id="lt-event-title">실전 운용 기록</h1>
-      <p class="lt-conn"><span class="connection" role="status" data-event-state>링크 확인 중</span></p>
-      <p class="lt-checked" data-event-checked></p>
+      <h1 id="lt-page-title" data-page-title>날짜별 실전 기록</h1>
+      <p class="lt-conn"><span class="connection" role="status" data-page-state>불러오는 중</span></p>
+      <p class="lt-checked" data-page-checked></p>
     </div>
-    <div class="lt-body" data-event-body>
+    <div class="lt-body" data-page-body>
       <noscript><p class="lt-empty">이 기록은 브라우저에서 불러옵니다. JavaScript를 켜 주세요.</p></noscript>
     </div>
   </section>
 </BaseLayout>
 <script>
-  import { connectLiveEvent } from '../../utils/live-event-client';
-  connectLiveEvent();
+  import { connectLivePage } from '../../utils/live-page-client';
+  connectLivePage();
 </script>
 <style>
-  .lt-event { display: grid; grid-template-columns: minmax(16rem, 1fr) minmax(0, 38rem); gap: 1.6rem clamp(2rem, 4vw, 3.5rem); align-items: start; padding-block: clamp(2rem, 5vw, 3.5rem) clamp(3rem, 7vw, 5rem); }
+  .lt-page { display: grid; grid-template-columns: minmax(16rem, 1fr) minmax(0, 40rem); gap: 1.6rem clamp(2rem, 4vw, 3.5rem); align-items: start; padding-block: clamp(2rem, 5vw, 3.5rem) clamp(3rem, 7vw, 5rem); }
   .lt-side { display: grid; gap: .4rem; justify-items: start; padding-top: 1rem; border-top: 2px solid var(--text); }
   .lt-side h1 { margin: 0; font: 800 clamp(1.8rem, 2.8vw, 2.4rem)/1.1 var(--display); letter-spacing: -.04em; }
   .lt-side p { margin: 0; color: var(--muted); font: 500 .98rem/1.55 var(--body); }
   .lt-crumb a { color: var(--muted); font: 600 .85rem var(--body); text-decoration: none; }
   .lt-crumb a:hover, .lt-crumb a:focus-visible { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
-  .connection { color: var(--text); font: 700 .82rem var(--body); }
-  .connection::before { content: ''; display: inline-block; width: 6px; height: 6px; margin-right: .45rem; border-radius: 50%; background: var(--faint); vertical-align: .12em; }
   .lt-side .lt-checked { color: var(--faint); font-size: .78rem; }
   .lt-body { display: grid; gap: 1.4rem; padding-top: .9rem; border-top: 2px solid var(--text); min-width: 0; }
   @media (max-width: 1100px) {
-    .lt-event { grid-template-columns: minmax(0, 1fr); }
+    .lt-page { grid-template-columns: minmax(0, 1fr); }
     .lt-side { padding-top: 0; border-top: 0; }
   }
 </style>

@@ -17,6 +17,8 @@ for (const dir of ['research', 'performance']) {
 // The last durable live-trading snapshot (pushed by the server's exporter), shown while the server is off.
 const live = path.join(tmp, 'live', 'live-trading.json');
 if (fs.existsSync(live)) { fs.mkdirSync('data', { recursive: true }); fs.copyFileSync(live, path.join('data', 'live-trading.json')); }
+const liveIndex = path.join(tmp, 'live', 'index.json');
+if (fs.existsSync(liveIndex)) { fs.mkdirSync(path.join('public', 'live'), { recursive: true }); fs.copyFileSync(liveIndex, path.join('public', 'live', 'index.json')); }
 const liveDays = path.join(tmp, 'live', 'days');
 if (fs.existsSync(liveDays)) {
   fs.mkdirSync(path.join('public', 'live', 'days'), { recursive: true });
